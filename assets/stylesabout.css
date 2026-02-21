@@ -1,0 +1,241 @@
+
+
+/*INTRODUCCION*/
+
+
+.about_intro{
+    display: flex;
+    gap: 32px;
+    padding-bottom: var(--gap-S) ;
+}
+
+.about_intro img{
+    height: var(--height-XXL);
+    width: 50%;
+    object-fit: cover;
+    border-radius: 14px;
+}
+
+.about_intro_content{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    width: 50%;
+}
+
+.about_intro_content h3{
+    color: var(--General-400);
+}
+
+.about_intro_content p{
+    font-size: 1.389rem;
+    font-weight: var(--text-regular);
+    color: var(--General-300);
+    letter-spacing: -1px;
+}
+
+
+/*EXPERIENCIA LABORAL*/
+
+.experiencia{
+    padding: var(--gap-L) 0;
+    border-top: 1px solid var(--General-400);
+}
+
+.experiencia_content{
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-XL);
+}
+
+/*MARQUEE*/
+.marquee {
+  width: 100%;
+  background-color: var(--General-400); 
+  white-space: nowrap;
+  overflow: hidden;
+  padding: var(--gap-S) 0;
+  display: flex;
+  align-items: center;
+}
+
+.marquee__content {
+  display: flex;
+  animation: scroll 20s linear infinite;
+}
+
+.marquee__content span {
+    font-size: 1.389rem;
+    font-weight: var(--text-black);
+    color: var(--General-100);
+    letter-spacing: -0,5px;
+    text-transform: uppercase;
+    padding-right: 20px; /* Espacio entre el final y el inicio del siguiente bloque */
+}
+
+/* El truco del bucle infinito */
+@keyframes scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Opcional: Pausa el cintillo cuando pasas el ratón por encima */
+.marquee:hover .marquee__content {
+  animation-play-state: paused;
+}
+
+
+/*FORMACION*/
+
+.formacion{
+    padding: var(--gap-L) 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.formacion_row{
+    padding: var(--gap-L) 0;
+    border-top: 1px solid var(--General-400);
+    align-items: center;
+}
+
+/*IDIOMAS*/
+.idiomas{
+    padding: var(--gap-L) 0;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.idiomas_content{
+    border-radius: 14px;
+    background-color: #fff;
+    padding: var(--gap-L) 0;
+    text-align: center;
+}
+
+
+/*BOTON CROSS CONTACTO*/
+
+a.big_button {
+    gap: 32px;
+    position: relative; /* Necesario para posicionar la imagen dentro */
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Asegura que el contenido esté al centro */
+    text-align: center;
+    text-decoration: none;
+    padding: 3.5rem 185px;
+    height: 100%;
+    width: 100%;
+    background-color: var(--General-400);
+    border-radius: 14px;
+    overflow: hidden; /* Evita que la imagen sobresalga si es muy grande */
+}
+
+.big_button .img_desktop {
+    position: absolute;
+    left: 0;
+    height: 100%;
+    object-fit: contain;
+    transition: all 0.5s ease;
+    transform: translateX(-100%);
+}
+
+/* Efecto Hover */
+.big_button:hover .img_desktop {
+    transform: translateX(0); /* Vuelve a su posición original */
+}
+
+.big_button_content {
+    max-width: 50rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-S);
+    z-index: 1; /* Asegura que el texto esté por encima de la imagen si se solapan */
+}
+
+.img_mobile{
+    display: none;
+}
+
+/* Mantengo tus estilos de tipografía */
+.big_button_content h3 {
+    font-size: 2.833rem;
+    font-weight: var(--text-black);
+    color: var(--General-100);
+    letter-spacing: -2.88px;
+    line-height: 95%;
+}
+
+.big_button_content p {
+    font-size: 1.389rem;
+    font-weight: var(--text-light);
+    color: var(--General-100);
+    letter-spacing: -1px;
+}
+
+@media (max-width: 768px) {
+
+
+    /*INTRODUCCION*/
+    .about_intro{
+        flex-direction: column;
+    }
+
+    .about_intro img{
+        width: 100%;
+        height: 400px;
+    }
+
+    .about_intro_content{
+        width: 100%;
+    }
+
+    .about_intro_content p{
+        font-size: 1.000rem;
+        letter-spacing: -0.72px;
+    }
+
+
+    /*FORMACION*/
+    .formacion_row{
+        row-gap: 8px;
+    }
+
+
+    /*BOTON CROSS CONTACT*/
+    .big_button_content h3{
+        font-size: 2.000rem;
+        letter-spacing: -1.44px;
+    }
+
+    .big_button_content p{
+        font-size: 1.000rem;
+        letter-spacing: -0.72px;
+    }
+
+    a.big_button {
+        flex-direction: column;
+        padding: 40px 32px 0 32px;
+    }
+
+    .img_desktop {
+        display: none;
+    }
+
+    .img_mobile {
+        display: block;
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        object-position: bottom;
+    }
+    
+}
