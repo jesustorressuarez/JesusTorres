@@ -599,6 +599,8 @@ html.lenis, html.lenis body {
     gap: 32px;
 }
 
+
+
     /*CARD PROYECTOS*/
     .card_proyecto{
         width: 100%;
@@ -652,10 +654,16 @@ html.lenis, html.lenis body {
         position: relative;
         display: block;
         width: 100%;
-        height: var(--height-XL);
+        height: 45vh;
         border-radius: 14px;
         overflow: hidden;
         text-decoration: none;
+    }
+
+    .grid-variable{
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
     }
 
     /* Imagen */
@@ -670,13 +678,11 @@ html.lenis, html.lenis body {
         height: 100%;
         object-fit: cover;
         display: block;
-        filter: grayscale(100%);
         transition: transform 0.5s ease, filter 0.4s ease;
     }
 
     .card-overlay:hover .card-overlay__image img {
         transform: scale(1.05);
-        filter: grayscale(0%);
     }
 
     .card-overlay__content {
@@ -1365,6 +1371,10 @@ textarea:focus ~ .bar:before {
         filter: none;
     }
 
+    .grid-variable{
+        grid-template-columns: repeat(1, 1fr);
+    }
+
     
 
 
@@ -1480,5 +1490,19 @@ textarea:focus ~ .bar:before {
 @media (min-width: 1920px) {
   html {
     font-size: clamp(19px, 0.9vw, 40px);
+  }
+
+ .footer_home ul{
+    gap: 2.5vw;
+  }
+
+}
+
+@media ( min-width: 920px) {
+
+  .grid-variable{
+    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+
   }
 }
