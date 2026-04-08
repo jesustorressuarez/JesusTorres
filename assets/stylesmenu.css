@@ -287,6 +287,6 @@ html, body{
 
 @media (min-width: 1920px) {
   html {
-    font-size: clamp(19px, 0.9vw, 40px);
+    font-size: clamp(19px, 0.5vw, 40px);
   }
 }
