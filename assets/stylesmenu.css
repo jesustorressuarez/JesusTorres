@@ -90,7 +90,8 @@ html, body{
 
 .nav__item a.active {
     font-weight: var(--text-extrabold);
-    color: var(--General-400);}
+    color: var(--General-400);
+}
 
 /* =========================
    SUBMENU (DESKTOP)
@@ -146,6 +147,10 @@ html, body{
    LANGUAGE SELECTOR
 ========================= */
 
+.lang-selector {
+  position: relative;
+}
+
 .lang-selector a {
   text-decoration: none;
   font-size: 0.722rem;
@@ -162,6 +167,36 @@ html, body{
 .lang-selector a.active {
   font-weight: var(--text-extrabold);
   color: var(--General-400);
+}
+
+/* Language tooltip — same style as .submenu dropdown */
+.lang-tooltip {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  background: none;
+  color: var(--General-200);
+  font-size: 0.722rem;
+  font-weight: var(--text-regular);
+  letter-spacing: -0.72px;
+  white-space: nowrap;
+  padding: 6px 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lang-tooltip img {
+  display: block;
+  border-radius: 2px;
+}
+
+.lang-selector a:hover .lang-tooltip {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 

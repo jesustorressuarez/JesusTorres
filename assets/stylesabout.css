@@ -69,7 +69,7 @@
     font-size: 1.389rem;
     font-weight: var(--text-black);
     color: var(--General-100);
-    letter-spacing: -0,5px;
+    letter-spacing: -0.5px;
     text-transform: uppercase;
     padding-right: 20px; /* Espacio entre el final y el inicio del siguiente bloque */
 }
