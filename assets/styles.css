@@ -1211,3 +1211,11 @@ textarea:focus ~ .bar:before {
     /* Hero complex */
     .hero_complex {
         padding: 80px 0 40px 0
+  }
+}
+
+@media (min-width: 1920px) {
+    .grid-variable{
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
