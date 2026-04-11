@@ -18,6 +18,8 @@
     <style>
         .hero_simply h1 {
             white-space: nowrap;
+            overflow: visible !important;
+            line-height: 1.15 !important;
             transition: font-family 0.05s, font-size 0.15s ease;
         }
     </style>
@@ -166,21 +168,29 @@
                     <form id="contactForm" action="https://formspree.io/f/TU_EMAIL_AQUI" method="POST" novalidate>
                         
                         <div class="input-group">
-                            <input type="text" id="nombre" name="name" required placeholder=" ">
+                            <input type="text" id="nombre" name="name" autocomplete="name" required placeholder=" ">
                             <label for="nombre">Nombre</label>
                             <span class="bar"></span>
                             <span class="error-msg">Este campo es obligatorio</span>
                         </div>
 
+                        <input type="hidden" name="_replyto" id="replyto">
                         <div class="input-group">
-                            <input type="email" id="email" name="_replyto" required placeholder=" ">
+                            <input type="email" id="email" name="email" autocomplete="email" required placeholder=" ">
                             <label for="email">Email</label>
                             <span class="bar"></span>
                             <span class="error-msg">Introduce un email válido</span>
                         </div>
 
                         <div class="input-group">
-                            <textarea id="mensaje" name="message" rows="3" required placeholder=" "></textarea>
+                            <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" ">
+                            <label for="telefono">Teléfono <span class="label-hint">(opcional)</span></label>
+                            <span class="bar"></span>
+                            <span class="error-msg" id="phoneError">Incluye el prefijo (ej. +34 612 345 678)</span>
+                        </div>
+
+                        <div class="input-group">
+                            <input type="text" id="mensaje" name="message" required placeholder=" ">
                             <label for="mensaje">Mensaje</label>
                             <span class="bar"></span>
                             <span class="error-msg">Por favor, escribe un mensaje</span>
@@ -266,10 +276,10 @@
             var phrases = [
                 { text: '¿Hablamos?',       font: "'Inter', sans-serif",              fontStyle: 'normal' },
                 { text: 'Shall we talk?',   font: "'DM Serif Text', serif",           fontStyle: 'normal' },
+                { text: '話しましょうか？',    font: "'Noto Sans JP', sans-serif",       fontStyle: 'normal' },
                 { text: 'Sprechen wir?',    font: "'UnifrakturMaguntia', cursive",    fontStyle: 'normal' },
-                { text: '我們聊聊？',         font: "'Noto Sans TC', sans-serif",       fontStyle: 'normal' },
                 { text: 'Parliamo?',        font: "'Playfair Display', serif",        fontStyle: 'italic' },
-                { text: '話しましょうか？',    font: "'Noto Sans JP', sans-serif",       fontStyle: 'normal' }
+                { text: '我們聊聊？',         font: "'Noto Sans TC', sans-serif",       fontStyle: 'normal' }
             ];
 
             var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz¿?¡!@#&あ漢話聊';
@@ -359,12 +369,19 @@
             });
 
             calcScales();
+            // Arrancar con scramble visible desde el primer momento
             var first = phrases[0];
             el.style.fontFamily = first.font;
             el.style.fontStyle = first.fontStyle;
             el.style.fontSize = (BASE_FONT_SIZE * first.scale) + 'rem';
-            el.textContent = first.text;
-            animTimeout = setTimeout(next, PAUSE);
+            el.textContent = first.text.replace(/./g, function() {
+                return chars[Math.floor(Math.random() * chars.length)];
+            });
+            setTimeout(function() {
+                scrambleTo(first.text, first, function () {
+                    animTimeout = setTimeout(next, PAUSE);
+                });
+            }, 300);
         })();
     </script>
 

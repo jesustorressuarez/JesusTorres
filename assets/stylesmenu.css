@@ -40,6 +40,7 @@ html, body{
 ========================= */
 
 .header {
+  position: relative;
   top: 0;
   width: 100%;
   background: var(--General-100);
@@ -172,7 +173,7 @@ html, body{
 /* Language tooltip — same style as .submenu dropdown */
 .lang-tooltip {
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 12px);
   right: 0;
   background: none;
   color: var(--General-200);

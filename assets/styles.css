@@ -315,13 +315,13 @@ html.lenis, html.lenis body {
 .general_footer {
     display: flex;
     flex-direction: column;
-    gap: 64px;
-    padding: var(--gap-XXL) 0 8px 0;
+    gap: 20px;
+    padding: 24px 0 8px 0;
 }
 
 .general_footer_buttons {
     display: flex;
-    padding-top: 42px;
+    padding-top: 16px;
     justify-content: space-between;
     border-top: 1px solid var(--General-400);
     align-items: flex-end;
@@ -602,10 +602,10 @@ html.lenis, html.lenis body {
 }
 
 .hero_simply h1 {
-    line-height: 95%;
+    line-height: 1.15;
     flex: 0 1 50%;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
     font-size: 5.667rem;
     font-weight: var(--text-black);
     color: var(--General-400);
@@ -1002,6 +1002,24 @@ textarea:focus ~ .bar:before {
 
 .cta_form:active {
     transform: scale(0.97);
+}
+
+/* Phone field */
+
+input[type="tel"] {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.000rem;
+    color: var(--General-400);
+}
+
+.label-hint {
+    font-size: 0.722rem;
+    font-weight: var(--text-regular);
+    color: var(--General-200);
+}
+
+.input-group.error .label-hint {
+    color: var(--color-error);
 }
 
 /* Email copiable */

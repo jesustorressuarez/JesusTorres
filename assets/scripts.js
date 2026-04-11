@@ -234,13 +234,24 @@
         var form = document.getElementById('contactForm');
 
         if (form) {
-            var inputs = form.querySelectorAll('input, textarea');
+            // Sincronizar campo _replyto con el email (para Formspree)
+            var emailInput = document.getElementById('email');
+            var replytoInput = document.getElementById('replyto');
+            if (emailInput && replytoInput) {
+                emailInput.addEventListener('input', function () {
+                    replytoInput.value = emailInput.value;
+                });
+            }
+
+            var requiredInputs = form.querySelectorAll('[required]');
+            var telefono = document.getElementById('telefono');
 
             form.addEventListener('submit', function (e) {
                 var isValid = true;
 
-                inputs.forEach(function (input) {
-                    var group = input.parentElement;
+                // Validar campos obligatorios
+                requiredInputs.forEach(function (input) {
+                    var group = input.closest('.input-group');
                     var isEmailInvalid = input.type === 'email' && !validateEmail(input.value);
                     var isEmpty = input.value.trim() === '';
 
@@ -252,16 +263,45 @@
                         group.classList.remove('error');
                     }
                 });
+
+                // Validar teléfono: si se rellena, debe incluir prefijo (empezar con +)
+                if (telefono) {
+                    var phoneGroup = telefono.closest('.input-group');
+                    var phoneVal = telefono.value.trim();
+
+                    if (phoneVal !== '' && !phoneVal.startsWith('+')) {
+                        e.preventDefault();
+                        phoneGroup.classList.add('error');
+                        isValid = false;
+                    } else {
+                        phoneGroup.classList.remove('error');
+                    }
+                }
+
+                // Sincronizar _replyto antes de enviar
+                if (replytoInput && emailInput) {
+                    replytoInput.value = emailInput.value;
+                }
             });
 
             // Limpiar estado de error al corregir
-            inputs.forEach(function (input) {
+            requiredInputs.forEach(function (input) {
                 input.addEventListener('input', function () {
                     if (input.value.trim() !== '') {
-                        input.parentElement.classList.remove('error');
+                        input.closest('.input-group').classList.remove('error');
                     }
                 });
             });
+
+            // Limpiar error del teléfono al escribir
+            if (telefono) {
+                telefono.addEventListener('input', function () {
+                    var phoneVal = telefono.value.trim();
+                    if (phoneVal === '' || phoneVal.startsWith('+')) {
+                        telefono.closest('.input-group').classList.remove('error');
+                    }
+                });
+            }
         }
 
         function validateEmail(email) {
