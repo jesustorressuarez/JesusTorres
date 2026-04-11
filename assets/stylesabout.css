@@ -1,4 +1,35 @@
 
+/* SALUDO ANIMADO ¡Hola! — terminal typewriter */
+
+.hola_greeting {
+    display: inline-block;
+    font-weight: var(--text-black);
+    color: var(--General-400);
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+
+.hola_greeting::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1.05em;
+    background: currentColor;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    animation: cursor-blink 0.7s step-end infinite;
+}
+
+.hola_greeting.no-blink::after {
+    animation: none;
+    background: currentColor;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
 
 /*INTRODUCCION*/
 
@@ -14,6 +45,15 @@
     width: 50%;
     object-fit: cover;
     border-radius: 14px;
+}
+
+.about_intro img.inline-flag{
+    width: 24px;
+    height: 18px;
+    border-radius: 2px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin: 0 3px;
 }
 
 .about_intro_content{
@@ -62,7 +102,7 @@
 
 .marquee__content {
   display: flex;
-  animation: scroll 20s linear infinite;
+  animation: scroll 40s linear infinite;
 }
 
 .marquee__content span {
@@ -71,7 +111,18 @@
     color: var(--General-100);
     letter-spacing: -0.5px;
     text-transform: uppercase;
-    padding-right: 20px; /* Espacio entre el final y el inicio del siguiente bloque */
+    padding-right: 0;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.marquee-icon {
+    height: 1.2em;
+    width: auto;
+    margin-right: 0.4em;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 /* El truco del bucle infinito */
@@ -118,6 +169,18 @@
     background-color: #fff;
     padding: var(--gap-L) 0;
     text-align: center;
+}
+
+.idioma-flag{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.idioma-flag img{
+    border-radius: 2px;
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,.1);
 }
 
 
@@ -183,7 +246,6 @@ a.big_button {
 
 @media (max-width: 768px) {
 
-
     /*INTRODUCCION*/
     .about_intro{
         flex-direction: column;
@@ -202,7 +264,6 @@ a.big_button {
         font-size: 1.000rem;
         letter-spacing: -0.72px;
     }
-
 
     /*FORMACION*/
     .formacion_row{

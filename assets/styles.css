@@ -903,6 +903,10 @@ html.lenis, html.lenis body {
     min-height: 100vh;
 }
 
+.contact_layout .hero_simply {
+    padding: 60px 0 40px 0;
+}
+
 .form-container {
     width: 100%;
     grid-column: 7 / 13;
@@ -911,6 +915,10 @@ html.lenis, html.lenis body {
 .input-group {
     position: relative;
     margin-bottom: var(--gap-XXL);
+}
+
+.contact_layout .input-group {
+    margin-bottom: var(--gap-L);
 }
 
 input, textarea {
@@ -1257,8 +1265,13 @@ input[type="tel"] {
         grid-column: 1 / -1;
     }
 
+    .contact_layout .input-group {
+        margin-bottom: var(--gap-XL);
+    }
+
     /* Hero simple */
-    .hero_simply {
+    .hero_simply,
+    .contact_layout .hero_simply {
         flex-direction: column;
         align-items: flex-start;
         gap: 20px;

@@ -61,7 +61,7 @@
         var rotatorContainer = document.querySelector('.word-rotator');
 
         if (rotatorContainer) {
-            var words = ['Arquitecto', 'Bim Manager', 'Fotógrafo amateur'];
+            var words = ['Arquitecto', 'BIM Manager', 'Fotógrafo amateur'];
             words.forEach(function (word, index) {
                 var span = document.createElement('span');
                 span.classList.add('rotating-word');
@@ -264,15 +264,40 @@
                     }
                 });
 
-                // Validar teléfono: si se rellena, debe incluir prefijo (empezar con +)
+                // Validar teléfono: si se rellena, debe incluir prefijo y tener 9 cifras
                 if (telefono) {
                     var phoneGroup = telefono.closest('.input-group');
+                    var phoneError = document.getElementById('phoneError');
                     var phoneVal = telefono.value.trim();
 
-                    if (phoneVal !== '' && !phoneVal.startsWith('+')) {
-                        e.preventDefault();
-                        phoneGroup.classList.add('error');
-                        isValid = false;
+                    if (phoneVal !== '') {
+                        // Extraer solo dígitos (sin el +)
+                        var digits = phoneVal.replace(/[^0-9]/g, '');
+                        // Separar prefijo y número: el prefijo son los dígitos antes del primer espacio/guión tras el +
+                        var match = phoneVal.match(/^\+(\d{1,4})[\s\-]?(.*)$/);
+
+                        if (!phoneVal.startsWith('+')) {
+                            phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
+                            e.preventDefault();
+                            phoneGroup.classList.add('error');
+                            isValid = false;
+                        } else if (match) {
+                            var prefixDigits = match[1].length;
+                            var numberDigits = match[2].replace(/[^0-9]/g, '').length;
+                            if (numberDigits !== 9) {
+                                phoneError.textContent = 'El número debe tener 9 cifras';
+                                e.preventDefault();
+                                phoneGroup.classList.add('error');
+                                isValid = false;
+                            } else {
+                                phoneGroup.classList.remove('error');
+                            }
+                        } else {
+                            phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
+                            e.preventDefault();
+                            phoneGroup.classList.add('error');
+                            isValid = false;
+                        }
                     } else {
                         phoneGroup.classList.remove('error');
                     }

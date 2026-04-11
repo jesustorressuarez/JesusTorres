@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- IFC / buildingSMART logo – white monochrome -->
+  <!-- Four interlocking rounded-corner diamonds in pinwheel arrangement -->
+  <defs>
+    <!-- Mask to create over/under weaving effect -->
+    <!-- Top-left goes UNDER top-right at their crossing -->
+    <mask id="m-tl">
+      <rect width="100" height="100" fill="white"/>
+      <!-- Cut out where top-right passes over -->
+      <rect x="45" y="10" width="45" height="45" rx="10" ry="10"
+            transform="rotate(45 67.5 32.5)"
+            fill="black" stroke="black" stroke-width="12"/>
+    </mask>
+    <!-- Top-right goes UNDER bottom-right at their crossing -->
+    <mask id="m-tr">
+      <rect width="100" height="100" fill="white"/>
+      <rect x="45" y="45" width="45" height="45" rx="10" ry="10"
+            transform="rotate(45 67.5 67.5)"
+            fill="black" stroke="black" stroke-width="12"/>
+    </mask>
+    <!-- Bottom-right goes UNDER bottom-left at their crossing -->
+    <mask id="m-br">
+      <rect width="100" height="100" fill="white"/>
+      <rect x="10" y="45" width="45" height="45" rx="10" ry="10"
+            transform="rotate(45 32.5 67.5)"
+            fill="black" stroke="black" stroke-width="12"/>
+    </mask>
+    <!-- Bottom-left goes UNDER top-left at their crossing -->
+    <mask id="m-bl">
+      <rect width="100" height="100" fill="white"/>
+      <rect x="10" y="10" width="45" height="45" rx="10" ry="10"
+            transform="rotate(45 32.5 32.5)"
+            fill="black" stroke="black" stroke-width="12"/>
+    </mask>
+  </defs>
+
+  <!-- Draw each diamond with its mask for weaving -->
+  <!-- Top-left (blue in original) -->
+  <rect x="10" y="10" width="45" height="45" rx="10" ry="10"
+        transform="rotate(45 32.5 32.5)"
+        fill="none" stroke="#FFFFFF" stroke-width="8" mask="url(#m-tl)"/>
+  <!-- Top-right (red in original) -->
+  <rect x="45" y="10" width="45" height="45" rx="10" ry="10"
+        transform="rotate(45 67.5 32.5)"
+        fill="none" stroke="#FFFFFF" stroke-width="8" mask="url(#m-tr)"/>
+  <!-- Bottom-right (teal in original) -->
+  <rect x="45" y="45" width="45" height="45" rx="10" ry="10"
+        transform="rotate(45 67.5 67.5)"
+        fill="none" stroke="#FFFFFF" stroke-width="8" mask="url(#m-br)"/>
+  <!-- Bottom-left (purple in original) -->
+  <rect x="10" y="45" width="45" height="45" rx="10" ry="10"
+        transform="rotate(45 32.5 67.5)"
+        fill="none" stroke="#FFFFFF" stroke-width="8" mask="url(#m-bl)"/>
+</svg>

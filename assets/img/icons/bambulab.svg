@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF">
+  <!-- BambuLab: stylized bamboo shoot / leaf -->
+  <!-- Main stem -->
+  <path d="M11 2v20h2V2h-2z"/>
+  <!-- Node lines -->
+  <rect x="10" y="7.5" width="4" height="1.2" rx="0.3"/>
+  <rect x="10" y="13" width="4" height="1.2" rx="0.3"/>
+  <!-- Left leaf top -->
+  <path d="M11 4.5C8 5.5 5.5 4 4 2.5c1 3 4 5.5 7 5v-3z"/>
+  <!-- Right leaf mid -->
+  <path d="M13 9.5c3 1 5.5-.5 7-2-1 3-4 5.5-7 5v-3z"/>
+  <!-- Left leaf bottom -->
+  <path d="M11 15c-3 1-5.5-.5-7-2 1 3 4 5.5 7 5v-3z"/>
+</svg>

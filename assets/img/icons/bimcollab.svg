@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF">
+  <!-- BIMCollab: stylized H with diagonal cuts -->
+  <!-- Left column - top piece -->
+  <polygon points="4,1 10,1 10,10.5 4,13"/>
+  <!-- Left column - bottom piece -->
+  <polygon points="4,14.8 10,12.3 10,23 4,23"/>
+  <!-- Right column - top piece -->
+  <polygon points="14,1 20,1 20,11.2 14,8.7"/>
+  <!-- Right column - bottom piece -->
+  <polygon points="14,10.5 20,13 20,23 14,23"/>
+</svg>
