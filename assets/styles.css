@@ -597,7 +597,7 @@ html.lenis, html.lenis body {
 .hero_simply {
     display: flex;
     gap: 32px;
-    padding: 100px 0 80px 0;
+    padding: 60px 0 80px 0;
     align-items: flex-end;
 }
 
@@ -624,7 +624,7 @@ html.lenis, html.lenis body {
 .hero_complex {
     display: flex;
     flex-direction: column;
-    padding: 100px 0 80px 0;
+    padding: 60px 0 80px 0;
     gap: 42px;
 }
 
@@ -848,20 +848,38 @@ html.lenis, html.lenis body {
 
 .modal-nav {
     display: flex;
+    align-items: center;
+    justify-content: center;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--General-100);
-    color: white;
+    background: none;
     border: none;
-    padding: 15px;
+    padding: 16px;
     cursor: pointer;
     z-index: 10001;
-    border-radius: 200px;
+    transition: opacity 0.25s ease;
+    opacity: 0.55;
 }
 
 .modal-nav:hover {
-    background: var(--General-200);
+    opacity: 1;
+}
+
+.modal-nav .chevron {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-top: 3.5px solid var(--General-100);
+    border-right: 3.5px solid var(--General-100);
+}
+
+.prev-modal .chevron {
+    transform: rotate(-135deg);
+}
+
+.next-modal .chevron {
+    transform: rotate(45deg);
 }
 
 .prev-modal {
@@ -954,29 +972,48 @@ textarea:focus ~ .bar:before {
 }
 
 .cta_form {
+    font-family: 'Inter', sans-serif;
     font-weight: var(--text-black);
-    font-size: 1.000rem;
-    border-radius: var(--radius);
+    font-size: 2rem;
+    letter-spacing: -1.44px;
+    color: var(--General-400);
     border: none;
-    display: flex;
+    display: inline-block;
     background: none;
-    background-color: var(--General-400);
-    padding: 15px 25px;
+    background-image: linear-gradient(var(--General-400), var(--General-400));
+    background-position: left bottom;
+    background-size: 0% 3px;
+    background-repeat: no-repeat;
+    padding: 0 0 3px 0;
     cursor: pointer;
-    letter-spacing: 1px;
-    transition: 0.3s;
-    color: var(--General-100);
+    transition: background-size 0.3s ease;
 }
 
 .cta_form:hover {
-    background: var(--General-300);
-    color: var(--General-100);
+    background-size: 100% 3px;
 }
 
 .cta_form:active {
-    background: var(--General-400);
-    color: var(--General-100);
-    transform: scale(0.95);
+    transform: scale(0.97);
+}
+
+/* Email copiable */
+
+#emailCopiar {
+    font-weight: var(--text-black);
+    color: var(--General-300);
+    cursor: pointer;
+    background-image: linear-gradient(var(--General-300), var(--General-300));
+    background-position: left bottom;
+    background-size: 0% 3px;
+    background-repeat: no-repeat;
+    transition: background-size 0.3s ease;
+    padding: 0 4px 2px 4px;
+    margin: 0 -4px;
+}
+
+#emailCopiar:hover {
+    background-size: 100% 3px;
 }
 
 /* Form error states */
@@ -1214,7 +1251,14 @@ textarea:focus ~ .bar:before {
   }
 }
 
-@media (min-width: 1920px) {
+@media (min-width: 769px) {
+    .card-overlay {
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+}
+
+@media (min-width: 1800px) {
     .grid-variable{
         grid-template-columns: repeat(3, 1fr);
     }

@@ -13,8 +13,14 @@
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+TC:wght@900&family=UnifrakturMaguntia&family=Noto+Sans+JP:wght@900&family=DM+Serif+Text&family=Playfair+Display:ital,wght@1,900&display=swap" rel="stylesheet">
 
+    <style>
+        .hero_simply h1 {
+            white-space: nowrap;
+            transition: font-family 0.05s, font-size 0.15s ease;
+        }
+    </style>
 
 </head>
 <body>
@@ -144,11 +150,11 @@
 
         <section class="wrapper">
             <div class="hero_simply">
-            <h1>
+            <h1 id="heroTitle">
                 ¿Hablamos?
             </h1>
             <p>
-                Si te apetece que hablemos, puedes dejarme un mensaje a través del formulario. Y si eres más de email, copia este mail <span style="font-weight: var(--text-black); cursor: copy;" id="emailCopiar" onclick="copiarEmail(event)">jesustorresgr@gmail.com</span> y escríbeme directamente. Estaré encantado de leerte.
+                Si te apetece que hablemos, puedes dejarme un mensaje a través del formulario. Y si eres más de email, copia este mail <span id="emailCopiar" onclick="copiarEmail(event)">jesustorresgr@gmail.com</span> y escríbeme directamente. Estaré encantado de leerte.
             </p>
             </div>
         </section>
@@ -219,7 +225,7 @@
             </div>
             <div class="general_footer_credits">
                 <div class="autor">
-                <p class="body-small">Website designed and developed with <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg" alt="❤️" width="14" height="14" style="vertical-align: middle; display: inline-block;"> by</p>
+                <p class="body-small">Designed with <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg" alt="❤️" width="14" height="14" style="vertical-align: middle; display: inline-block;"> by</p>
                 <a href="https://javiexe.github.io/javiexe/index.html" target="_blank" rel="noopener noreferrer" class="body-small-bold link">Javi.exe</a>
                 </div>
                 <p class="body-small">© 2026</p>
@@ -247,8 +253,115 @@
 
     <script src="../assets/scripts.js"></script>
 
+    <script>
+        (function () {
+            var el = document.getElementById('heroTitle');
+            if (!el) return;
 
+            var BASE_FONT_SIZE = 5.667;
 
-    
+            var phrases = [
+                { text: '¿Hablamos?',       font: "'Inter', sans-serif",              fontStyle: 'normal' },
+                { text: 'Shall we talk?',   font: "'DM Serif Text', serif",           fontStyle: 'normal' },
+                { text: 'Sprechen wir?',    font: "'UnifrakturMaguntia', cursive",    fontStyle: 'normal' },
+                { text: '我們聊聊？',         font: "'Noto Sans TC', sans-serif",       fontStyle: 'normal' },
+                { text: 'Parliamo?',        font: "'Playfair Display', serif",        fontStyle: 'italic' },
+                { text: '話しましょうか？',    font: "'Noto Sans JP', sans-serif",       fontStyle: 'normal' }
+            ];
+
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz¿?¡!@#&あ漢話聊';
+            var PAUSE = 2000;
+            var SCRAMBLE_FRAMES = 5;
+            var FRAME_SPEED = Math.round(200 / 5);
+
+            var currentIdx = 0;
+            var scrambleInterval = null;
+            var animTimeout = null;
+
+            // Auto-scale para que el texto quepa
+            function calcScales() {
+                var container = el.parentElement;
+                var availableWidth = container.clientWidth / 2 - 16;
+                var measureEl = document.createElement('span');
+                measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:-3.5px;';
+                document.body.appendChild(measureEl);
+                phrases.forEach(function (p) {
+                    measureEl.style.fontFamily = p.font;
+                    measureEl.style.fontStyle = p.fontStyle;
+                    measureEl.style.fontSize = BASE_FONT_SIZE + 'rem';
+                    measureEl.textContent = p.text;
+                    var textWidth = measureEl.offsetWidth;
+                    p.scale = textWidth > availableWidth ? (availableWidth / textWidth) : 1;
+                });
+                document.body.removeChild(measureEl);
+            }
+
+            function scrambleTo(target, phrase, callback) {
+                clearInterval(scrambleInterval);
+                var frame = 0;
+                var LOCK_FROM = 2;
+                var LOCK_TO = SCRAMBLE_FRAMES - 1;
+
+                el.style.fontFamily = phrase.font;
+                el.style.fontStyle = phrase.fontStyle;
+                el.style.fontSize = (BASE_FONT_SIZE * phrase.scale) + 'rem';
+
+                var lockFrames = [];
+                for (var i = 0; i < target.length; i++) {
+                    if (target[i] === ' ') {
+                        lockFrames.push(0);
+                    } else {
+                        lockFrames.push(LOCK_FROM + Math.floor(Math.random() * (LOCK_TO - LOCK_FROM + 1)));
+                    }
+                }
+
+                scrambleInterval = setInterval(function () {
+                    if (frame < SCRAMBLE_FRAMES) {
+                        var result = '';
+                        for (var i = 0; i < target.length; i++) {
+                            if (frame >= lockFrames[i]) {
+                                result += target[i];
+                            } else {
+                                result += chars[Math.floor(Math.random() * chars.length)];
+                            }
+                        }
+                        el.textContent = result;
+                        frame++;
+                    } else {
+                        el.textContent = target;
+                        clearInterval(scrambleInterval);
+                        if (callback) callback();
+                    }
+                }, FRAME_SPEED);
+            }
+
+            function next() {
+                currentIdx = (currentIdx + 1) % phrases.length;
+                var p = phrases[currentIdx];
+                scrambleTo(p.text, p, function () {
+                    animTimeout = setTimeout(next, PAUSE);
+                });
+            }
+
+            // Init
+            window.addEventListener('resize', function () {
+                calcScales();
+                var p = phrases[currentIdx];
+                el.style.fontFamily = p.font;
+                el.style.fontStyle = p.fontStyle;
+                el.style.fontSize = (BASE_FONT_SIZE * p.scale) + 'rem';
+                el.textContent = p.text;
+            });
+
+            calcScales();
+            var first = phrases[0];
+            el.style.fontFamily = first.font;
+            el.style.fontStyle = first.fontStyle;
+            el.style.fontSize = (BASE_FONT_SIZE * first.scale) + 'rem';
+            el.textContent = first.text;
+            animTimeout = setTimeout(next, PAUSE);
+        })();
+    </script>
+
 </body>
-</html> 
+</html>
