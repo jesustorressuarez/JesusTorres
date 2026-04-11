@@ -1293,7 +1293,36 @@ input[type="tel"] {
     /* Hero complex */
     .hero_complex {
         padding: 80px 0 40px 0
-  }
+    }
+
+    .hero_heading {
+        flex-direction: column;
+    }
+
+    .hero_title{
+        width: 100%;
+    }
+
+    .hero_title h1{
+        flex: 0 0 auto;
+        font-size: 2.833rem;
+        letter-spacing: -2.04px;
+    }
+
+    .hero_heading h2{
+        font-size: 2.000rem;
+        letter-spacing: -2.04px;
+    }
+
+    .hero_heading p{
+        font-size: 1.000rem;
+        letter-spacing: -0.72px;
+        padding: 0;
+    }
+
+    .hero_details_text{
+        flex-direction: column;
+    }
 }
 
 @media (min-width: 769px) {
