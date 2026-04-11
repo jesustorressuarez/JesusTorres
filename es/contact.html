@@ -258,7 +258,10 @@
             var el = document.getElementById('heroTitle');
             if (!el) return;
 
-            var BASE_FONT_SIZE = 5.667;
+            function getBaseFontSize() {
+                return window.innerWidth <= 768 ? 2.833 : 5.667;
+            }
+            var BASE_FONT_SIZE = getBaseFontSize();
 
             var phrases = [
                 { text: '¿Hablamos?',       font: "'Inter', sans-serif",              fontStyle: 'normal' },
@@ -280,8 +283,10 @@
 
             // Auto-scale para que el texto quepa
             function calcScales() {
+                BASE_FONT_SIZE = getBaseFontSize();
                 var container = el.parentElement;
-                var availableWidth = container.clientWidth / 2 - 16;
+                var isMobile = window.innerWidth <= 768;
+                var availableWidth = isMobile ? container.clientWidth : (container.clientWidth / 2 - 16);
                 var measureEl = document.createElement('span');
                 measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:-3.5px;';
                 document.body.appendChild(measureEl);

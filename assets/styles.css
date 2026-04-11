@@ -603,7 +603,9 @@ html.lenis, html.lenis body {
 
 .hero_simply h1 {
     line-height: 95%;
-    width: 100%;
+    flex: 0 1 50%;
+    min-width: 0;
+    overflow: hidden;
     font-size: 5.667rem;
     font-weight: var(--text-black);
     color: var(--General-400);
@@ -612,7 +614,8 @@ html.lenis, html.lenis body {
 
 .hero_simply p {
     padding: 8px 0;
-    width: 100%;
+    flex: 1 1 50%;
+    min-width: 0;
     font-size: 1.389rem;
     font-weight: var(--text-regular);
     color: var(--General-300);
@@ -941,6 +944,10 @@ textarea:not(:placeholder-shown) ~ label {
     color: var(--General-200);
 }
 
+textarea {
+    resize: none;
+}
+
 input[type="text"],
 input[type="email"],
 textarea {
@@ -1227,14 +1234,21 @@ textarea:focus ~ .bar:before {
         grid-template-columns: repeat(1, 1fr);
     }
 
+    /* Formulario */
+    .form-container {
+        grid-column: 1 / -1;
+    }
+
     /* Hero simple */
     .hero_simply {
         flex-direction: column;
+        align-items: flex-start;
         gap: 20px;
         padding: 80px 0 40px 0;
     }
 
     .hero_simply h1 {
+        flex: 0 0 auto;
         font-size: 2.833rem;
         letter-spacing: -2.04px;
     }
