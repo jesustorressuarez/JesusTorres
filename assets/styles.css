@@ -761,7 +761,7 @@ html.lenis, html.lenis body {
     border-radius: var(--radius);
     height: var(--height-XL);
     object-fit: cover;
-    object-position: center top;
+    object-position: center;
 }
 
 .hero_details_text {
