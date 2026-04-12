@@ -59,13 +59,14 @@
 .about_intro_content{
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 12px;
     width: 50%;
 }
 
 .about_intro_content h3{
     color: var(--General-400);
+    margin-bottom: 24px;
 }
 
 .about_intro_content p{
@@ -193,6 +194,11 @@
 
 /*BOTON CROSS CONTACTO*/
 
+.wrapper_cta {
+    margin-top: 48px;
+    margin-bottom: 48px;
+}
+
 a.big_button {
     gap: 32px;
     position: relative; /* Necesario para posicionar la imagen dentro */
@@ -287,6 +293,11 @@ a.big_button {
     .big_button_content p{
         font-size: 1.000rem;
         letter-spacing: -0.72px;
+    }
+
+    .wrapper_cta {
+        margin-top: 32px;
+        margin-bottom: 32px;
     }
 
     a.big_button {

@@ -46,23 +46,12 @@
         <!-- Desktop Navigation -->
         <nav class="nav nav--desktop">
             <ul class="nav__list">
-                <li class="nav__item has-submenu">
+                <li class="nav__item">
                     <a href="./work.html">Trabajos</a>
-                    <ul class="submenu">
-                    <li><a href="./works/dialogogeneracional.html">Diálogo generacional</a></li>
-                    <li><a href="./works/museomemorial.html">Museo Memorial</a></li>
-                    <li><a class="link" href="./work.html">Ver todos</a></li>
-                    </ul>
                 </li>
 
-                <li class="nav__item has-submenu">
+                <li class="nav__item">
                     <a href="./photos.html">Fotos</a>
-                    <ul class="submenu">
-                        <li><a href="./photos/favoritas.html">Mis Favoritas</a></li>
-                        <li><a href="./photos/vietnam.html">Vietnam</a></li>
-                        <li><a href="./photos/tailandia.html">Tailandia</a></li>
-                        <li><a class="link" href="./photos.html">Ver todos</a></li>
-                    </ul>
                 </li>
 
                 <li class="nav__item">
@@ -212,6 +201,10 @@
         </div>
     </section>
 
+    <section class="wrapper">
+        <h2 class="title-super-small">Software</h2>
+    </section>
+
     <section>
         <div class="marquee">
         <div class="marquee__content">
@@ -269,7 +262,7 @@
         </div>
     </section>
 
-    <section class="wrapper">
+    <section class="wrapper wrapper_cta">
         <a href="./contact.html" class="big_button">
             <div class="big_button_content">
                 <h3 class="">¿Hablamos?</h3>
@@ -378,11 +371,11 @@
             { text: '你好！',        font: "'Noto Sans TC', sans-serif",  color: '#DAA520' },
             { text: 'Olá!',         font: "'Inter', sans-serif",         color: '#006600' },
             { text: 'Hallo!',       font: "'Inter', sans-serif",         color: '#DD0000' },
-            { text: '안녕!',         font: "'Noto Sans KR', sans-serif",  color: '#8B00FF' },
-            { text: 'Hej!',         font: "'Inter', sans-serif",         color: '#006AA7' }
+            { text: 'Hej!',         font: "'Inter', sans-serif",         color: '#006AA7' },
+            { text: '@$%&!',       font: "'Inter', sans-serif",         color: '#8B00FF' }
         ];
 
-        var PAUSE = 1600;
+        var PAUSE = 900;
         var TYPE_SPEED = 75;
         var DELETE_SPEED = 45;
         var currentIdx = 0;
@@ -424,4 +417,18 @@
                 setTimeout(function () {
                     currentIdx = (currentIdx + 1) % phrases.length;
                     typeText(phrases[currentIdx], function () {
-     
+                        setTimeout(next, PAUSE);
+                    });
+                }, 150);
+            });
+        }
+
+        // Init
+        typeText(phrases[0], function () {
+            setTimeout(next, PAUSE);
+        });
+    })();
+    </script>
+
+</body>
+</html>

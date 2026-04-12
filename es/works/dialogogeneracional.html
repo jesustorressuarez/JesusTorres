@@ -43,23 +43,12 @@
         <!-- Desktop Navigation -->
         <nav class="nav nav--desktop">
             <ul class="nav__list">
-                <li class="nav__item has-submenu">
+                <li class="nav__item">
                     <a class="active" href="../work.html">Trabajos</a>
-                    <ul class="submenu">
-                    <li><a href="./dialogogeneracional.html">Diálogo generacional</a></li>
-                    <li><a href="./museomemorial.html">Museo Memorial</a></li>
-                    <li><a class="link" href="../work.html">Ver todos</a></li>
-                    </ul>
                 </li>
 
-                <li class="nav__item has-submenu">
+                <li class="nav__item">
                     <a  href="../photos.html">Fotos</a>
-                    <ul class="submenu">
-                    <li><a href="../photos/vietnam.html">Vietnam</a></li>
-                    <li><a href="../photos/macro.html">Macro</a></li>
-                    <li><a href="../photos/naturaleza.html">Naturaleza</a></li>
-                    <li><a class="link" href="../photos.html">Ver todos</a></li>
-                    </ul>
                 </li>
 
                 <li class="nav__item">
@@ -149,14 +138,15 @@
         <div class="hero_heading">
             <div class="hero_title">
             <h1>Diálogo generacional</h1>
-            <h2>Rehabilitación de la Iglesia de las Angustias en Alhama de Granada</h2>
+            <h2 class="subtitle-oneline">Rehabilitación de la Iglesia de las Angustias en Alhama de Granada</h2>
             </div>
-            <p>
-            Proyecto final de la asignatura Proyectos 9, ETSAG, dirigida por el profesor D. Luis Javier Martín Martín. La intervención plantea un diálogo entre la preexistencia histórica y una arquitectura contemporánea que completa y revitaliza el conjunto, respetando la memoria del lugar.
-            </p>
+            <div class="hero_heading_text">
+                <p>Proyecto final de la asignatura Proyectos 9, ETSAG.</p>
+                <p>La intervención plantea un diálogo entre la preexistencia histórica y una arquitectura contemporánea que completa y revitaliza el conjunto, respetando la memoria del lugar.</p>
+            </div>
         </div>
         <div class="hero_details">
-            <img src="../../assets/img/dialogo_generacional/dialogogeneracional_portada.png" alt="Imagen de ejemplo">
+            <img src="../../assets/img/dialogo_generacional/dialogogeneracional_portada.png" alt="Imagen de ejemplo" onclick="openPortadaZoom(this.src)" style="cursor:pointer">
             <div class="hero_details_text">
             <div class="hero_details_column">
                 <div class="details">
@@ -174,8 +164,9 @@
                     <p>Alhama de Granada, España</p>
                 </div>
                 <div class="details">
-                    <h6>Autor</h6>
+                    <h6>Autores</h6>
                     <p>Jesús Torres</p>
+                    <p>Luis J. Martín Martín <span style="color: var(--General-300);">(Profesor)</span></p>
                 </div>
             </div>         
             </div>
@@ -187,6 +178,9 @@
 
 
     <section class="wrapper">
+        <div class="details" style="padding-bottom: 24px;">
+            <h6>Galería del proyecto</h6>
+        </div>
         <div class="carousel-container">
             <div class="carousel-track" id="track">
                 <div class="slide"><img src="../../assets/img/dialogo_generacional/3.png" alt="Img 1" onclick="openZoom(this.src)"></div>
@@ -215,11 +209,11 @@
 
         <div id="zoomModal" class="modal">
             <span class="close-btn" onclick="closeZoom()">&times;</span>
-            
+
             <button class="modal-nav prev-modal" onclick="changeModalImage(-1, event)">
                 <span class="chevron"></span>
             </button>
-            
+
             <div class="zoom-wrapper" id="zoomWrapper">
                 <img id="imgZoom" src="" alt="Vista ampliada">
             </div>
@@ -227,6 +221,11 @@
             <button class="modal-nav next-modal" onclick="changeModalImage(1, event)">
                 <span class="chevron"></span>
             </button>
+
+            <div class="zoom-minimap" id="zoomMinimap">
+                <img id="minimapImg" src="" alt="">
+                <div class="zoom-minimap-viewport" id="minimapViewport"></div>
+            </div>
         </div>
     </section>
 
@@ -240,7 +239,9 @@
 
 
     <section class="wrapper">
-        <h2 style="padding-bottom: 24px;" class="title-super-small">Siguiente Proyecto</h2>
+        <div class="details" style="padding-bottom: 24px;">
+            <h6>Siguiente Proyecto</h6>
+        </div>
         <div class="column_cards">
             <a href="./museomemorial.html" class="card-overlay" style="height: var(--height-L);">
                 <div class="card-overlay__image">
@@ -311,24 +312,103 @@
 
 
 
+    <!-- Modal portada (independiente del carrusel) -->
+    <div id="portadaModal" style="display:none;position:fixed;z-index:10000;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;cursor:default">
+        <span onclick="closePortadaZoom()" style="position:absolute;top:20px;right:32px;font-size:2.5rem;color:#fff;cursor:pointer;z-index:10001">&times;</span>
+        <div id="portadaWrapper" style="width:90vw;height:90vh;display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative">
+            <img id="portadaImg" src="" alt="Vista ampliada" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;transform-origin:center center;transition:transform 0.3s ease">
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
     <script>
         // 1. Inicializar Lenis
         const lenis = new Lenis();
 
-        // 2. Configurar el bucle de animación (indispensable)
+        // 2. Configurar el bucle de animación
         function raf(time) {
             lenis.raf(time);
             requestAnimationFrame(raf);
         }
-
         requestAnimationFrame(raf);
     </script>
 
     <script src="../../assets/scripts.js"></script>
 
+    <!-- Zoom portada (independiente del carrusel) -->
+    <script>
+    (function () {
+        var pModal = document.getElementById('portadaModal');
+        var pImg = document.getElementById('portadaImg');
+        var pWrapper = document.getElementById('portadaWrapper');
+        if (!pModal || !pImg) return;
 
+        var pZoomed = false;
+        var PZOOM = 2.5;
+        var pBaseW = 0, pBaseH = 0;
 
+        function resetPZoom() {
+            pZoomed = false;
+            pImg.style.transform = '';
+            pImg.style.cursor = 'zoom-in';
+            pImg.style.transition = 'transform 0.3s ease';
+            pBaseW = 0; pBaseH = 0;
+        }
+
+        window.openPortadaZoom = function (src) {
+            pImg.src = src;
+            pModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            if (typeof lenis !== 'undefined') lenis.stop();
+            resetPZoom();
+        };
+
+        window.closePortadaZoom = function () {
+            pModal.style.display = 'none';
+            document.body.style.overflow = '';
+            if (typeof lenis !== 'undefined') lenis.start();
+            resetPZoom();
+        };
+
+        pModal.addEventListener('click', function (e) {
+            if (e.target === pModal || e.target === pWrapper) closePortadaZoom();
+        });
+
+        pImg.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (!pZoomed) {
+                pBaseW = pImg.offsetWidth;
+                pBaseH = pImg.offsetHeight;
+                pZoomed = true;
+                pImg.style.cursor = 'zoom-out';
+                pImg.style.transition = 'none';
+                applyPPan(e);
+            } else {
+                resetPZoom();
+            }
+        });
+
+        function applyPPan(e) {
+            if (!pWrapper) return;
+            var wr = pWrapper.getBoundingClientRect();
+            var sW = pBaseW * PZOOM, sH = pBaseH * PZOOM;
+            var oX = Math.max(0, (sW - wr.width) / 2);
+            var oY = Math.max(0, (sH - wr.height) / 2);
+            var mx = ((e.clientX - wr.left) / wr.width) * 2 - 1;
+            var my = ((e.clientY - wr.top) / wr.height) * 2 - 1;
+            pImg.style.transform = 'translate(' + (-mx * oX) + 'px, ' + (-my * oY) + 'px) scale(' + PZOOM + ')';
+        }
+
+        pWrapper.addEventListener('mousemove', function (e) {
+            if (!pZoomed) return;
+            requestAnimationFrame(function () { applyPPan(e); });
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (pModal.style.display === 'flex' && e.key === 'Escape') closePortadaZoom();
+        });
+    })();
+    </script>
 
 </body>
 </html>

@@ -94,55 +94,6 @@ html, body{
     color: var(--General-400);
 }
 
-/* =========================
-   SUBMENU (DESKTOP)
-========================= */
-
-.has-submenu {
-  position: relative;
-}
-
-.submenu {
-  position: absolute;
-  top: calc(100% + 2px);
-  left: -16px;
-  min-width: 180px;
-  background: var(--General-100);
-  list-style: none;
-  padding: 16px 0;
-  border-radius: 16px;
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  transition: opacity .25s ease, visibility .25s ease;
-  box-shadow: 0 20px 40px rgba(0,0,0,.08);
-}
-
-.has-submenu:hover .submenu {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.submenu li a {
-  display: block;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-weight: var(--text-regular);
-  color: var(--General-200);
-  letter-spacing: -0.72px;
-}
-
-.submenu li a:hover {
-  color: var(--General-400);
-  transition: 0.3s ease-in-out;
-}
-
-.link {
-  text-decoration: underline;
-}
 
 /* =========================
    LANGUAGE SELECTOR

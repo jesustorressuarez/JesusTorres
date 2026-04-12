@@ -159,7 +159,19 @@
                         charIdx = eraseStop;
                         phase = 'typing';
                         seqIdx = (seqIdx + 1) % sequence.length;
-                        setTimeout(typewriterStep, eraseStop === 0 ? pauseEmpty : pauseEmpty);
+
+                        /* Si el siguiente paso es emoji, reiniciar animación del cursor
+                           para forzar un parpadeo limpio (on→off) durante la pausa */
+                        var nextStep = sequence[seqIdx];
+                        if (nextStep.isEmoji) {
+                            cursorEl.style.animation = 'none';
+                            void cursorEl.offsetHeight; /* forzar reflow */
+                            cursorEl.style.animation = '';
+                        }
+
+                        /* Borrado parcial → transición inmediata (0ms);
+                           borrado total   → pausa normal (pauseEmpty) */
+                        setTimeout(typewriterStep, eraseStop === 0 ? pauseEmpty : 0);
                     } else {
                         setTimeout(typewriterStep, deleteSpeed);
                     }
@@ -186,6 +198,11 @@
         var baseImgW = 0;
         var baseImgH = 0;
 
+        // --- Minimap ---
+        var zoomMinimap = document.getElementById('zoomMinimap');
+        var minimapImg = document.getElementById('minimapImg');
+        var minimapViewport = document.getElementById('minimapViewport');
+
         // --- Dots del carousel ---
         if (track && dotsContainer) {
             slides.forEach(function (_, i) {
@@ -200,6 +217,11 @@
 
             track.addEventListener('scroll', function () {
                 var index = Math.round(track.scrollLeft / track.offsetWidth);
+                // Si estamos al final del scroll, activar el último dot
+                if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 2) {
+                    index = slides.length - 1;
+                }
+                index = Math.min(index, slides.length - 1);
                 document.querySelectorAll('.dot').forEach(function (d, i) {
                     d.classList.toggle('active', i === index);
                 });
@@ -216,6 +238,46 @@
             }
             baseImgW = 0;
             baseImgH = 0;
+            hideMinimap();
+        }
+
+        function showMinimap(src) {
+            if (!zoomMinimap || !minimapImg) { return; }
+            minimapImg.src = src;
+            zoomMinimap.classList.add('active');
+        }
+
+        function hideMinimap() {
+            if (!zoomMinimap) { return; }
+            zoomMinimap.classList.remove('active');
+        }
+
+        function updateMinimapViewport(tx, ty) {
+            if (!zoomMinimap || !minimapViewport || !minimapImg || !zoomWrapper || !baseImgW || !baseImgH) { return; }
+            var mw = minimapImg.offsetWidth;
+            var mh = minimapImg.offsetHeight;
+            if (!mw || !mh) { return; }
+
+            var wr = zoomWrapper.getBoundingClientRect();
+
+            // Tamaño del viewport: qué fracción de la imagen escalada es visible
+            var vpW = Math.min(mw, mw * wr.width / (baseImgW * ZOOM_SCALE));
+            var vpH = Math.min(mh, mh * wr.height / (baseImgH * ZOOM_SCALE));
+
+            // Posición: el translate(tx,ty) desplaza la imagen escalada.
+            // En coords de imagen original el desplazamiento es tx/ZOOM_SCALE.
+            // Mapeado al minimap: tx * mw / (ZOOM_SCALE * baseImgW).
+            var left = mw / 2 - vpW / 2 - tx * mw / (ZOOM_SCALE * baseImgW);
+            var top  = mh / 2 - vpH / 2 - ty * mh / (ZOOM_SCALE * baseImgH);
+
+            // Clampar dentro del minimap
+            left = Math.max(0, Math.min(mw - vpW, left));
+            top  = Math.max(0, Math.min(mh - vpH, top));
+
+            minimapViewport.style.width  = vpW + 'px';
+            minimapViewport.style.height = vpH + 'px';
+            minimapViewport.style.left   = left + 'px';
+            minimapViewport.style.top    = top + 'px';
         }
 
         function cacheBaseDimensions() {
@@ -237,6 +299,7 @@
             var tx = -mx * overflowX;
             var ty = -my * overflowY;
             imgZoom.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + ZOOM_SCALE + ')';
+            updateMinimapViewport(tx, ty);
         }
 
         // --- Abrir / Cerrar Modal ---
@@ -250,6 +313,7 @@
             document.body.style.touchAction = 'none';
             if (typeof lenis !== 'undefined') { lenis.stop(); }
             resetZoom();
+            updateModalNavButtons();
         };
 
         window.closeZoom = function () {
@@ -261,6 +325,29 @@
             resetZoom();
         };
 
+        // --- Carrusel sin bucle (solo proyectos, no galerías de fotos) ---
+        var isGalleryCarousel = track && track.classList.contains('is-gallery');
+
+        function updateNavButtons() {
+            if (!track || isGalleryCarousel) { return; }
+            var navBtns = document.querySelectorAll('.carousel-controls .nav-btn');
+            if (navBtns.length < 2) { return; }
+            var atStart = track.scrollLeft <= 1;
+            var atEnd = track.scrollLeft + track.offsetWidth >= track.scrollWidth - 1;
+            navBtns[0].disabled = atStart;
+            navBtns[1].disabled = atEnd;
+            navBtns[0].style.opacity = atStart ? '0.25' : '';
+            navBtns[1].style.opacity = atEnd ? '0.25' : '';
+            navBtns[0].style.pointerEvents = atStart ? 'none' : '';
+            navBtns[1].style.pointerEvents = atEnd ? 'none' : '';
+        }
+
+        if (track && !isGalleryCarousel) {
+            track.addEventListener('scroll', updateNavButtons);
+            // Estado inicial
+            setTimeout(updateNavButtons, 100);
+        }
+
         window.moveSlide = function (dir) {
             if (track) {
                 track.scrollBy({ left: track.offsetWidth * dir, behavior: 'smooth' });
@@ -270,10 +357,27 @@
         window.changeModalImage = function (dir, event) {
             if (event) { event.stopPropagation(); }
             if (!slides.length || !imgZoom) { return; }
-            currentIdx = (currentIdx + dir + slides.length) % slides.length;
+            var newIdx = currentIdx + dir;
+            // Sin bucle: clampar en los extremos
+            if (newIdx < 0 || newIdx >= slides.length) { return; }
+            currentIdx = newIdx;
             imgZoom.src = slides[currentIdx].src;
             resetZoom();
+            updateModalNavButtons();
         };
+
+        function updateModalNavButtons() {
+            var prevBtn = document.querySelector('.modal-nav.prev-modal');
+            var nextBtn = document.querySelector('.modal-nav.next-modal');
+            if (prevBtn) {
+                prevBtn.style.opacity = currentIdx <= 0 ? '0.25' : '';
+                prevBtn.style.pointerEvents = currentIdx <= 0 ? 'none' : '';
+            }
+            if (nextBtn) {
+                nextBtn.style.opacity = currentIdx >= slides.length - 1 ? '0.25' : '';
+                nextBtn.style.pointerEvents = currentIdx >= slides.length - 1 ? 'none' : '';
+            }
+        }
 
         // --- Event listeners del Modal ---
 
@@ -292,6 +396,7 @@
                     cacheBaseDimensions();
                     isZoomed = true;
                     imgZoom.classList.add('active-zoom');
+                    showMinimap(imgZoom.src);
                     applyPan(e);
                 } else {
                     resetZoom();
@@ -312,12 +417,16 @@
             });
         }
 
-        // Teclado: navegar / cerrar modal
+        // Teclado: navegar / cerrar modal / mover carrusel
         document.addEventListener('keydown', function (e) {
             if (modal && modal.style.display === 'flex') {
                 if (e.key === 'Escape') { window.closeZoom(); }
-                if (e.key === 'ArrowRight') { window.changeModalImage(1); }
-                if (e.key === 'ArrowLeft') { window.changeModalImage(-1); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); window.changeModalImage(1); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); window.changeModalImage(-1); }
+            } else if (track && !isGalleryCarousel) {
+                // Flechas mueven el carrusel de proyecto sin necesidad de foco
+                if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); window.moveSlide(-1); }
             }
         });
 
@@ -350,6 +459,10 @@
             function applyTouchTransform() {
                 imgZoom.style.transition = 'none';
                 imgZoom.style.transform = 'translate(' + touchPanX + 'px, ' + touchPanY + 'px) scale(' + touchZoomScale + ')';
+                if (isTouchZoomed) {
+                    showMinimap(imgZoom.src);
+                    updateMinimapViewport(touchPanX, touchPanY);
+                }
             }
 
             function resetTouchZoom() {
@@ -363,6 +476,7 @@
                 imgZoom.style.transform = '';
                 imgZoom.classList.remove('active-zoom');
                 isZoomed = false;
+                hideMinimap();
             }
 
             zoomWrapper.addEventListener('touchstart', function (e) {
@@ -459,6 +573,7 @@
             window.changeModalImage = function (dir, event) {
                 resetTouchZoom();
                 origChangeModal(dir, event);
+                updateModalNavButtons();
             };
         }
 
@@ -700,6 +815,26 @@
                     rainBusy = false;
                     while (rainOverlay.firstChild) { rainOverlay.removeChild(rainOverlay.firstChild); }
                 }, (RAIN_TOTAL * RAIN_STAGGER) + duration + 200);
+            });
+        }
+
+        // --- Corazón POP en "mamá" (photos.html) ---
+        var mamaTrigger = document.getElementById('mama-trigger');
+        var mamaSlot    = document.getElementById('mama-heart-slot');
+
+        if (mamaTrigger && mamaSlot) {
+            mamaTrigger.addEventListener('click', function () {
+                mamaSlot.innerHTML = '';
+
+                requestAnimationFrame(function () {
+                    var img  = document.createElement('img');
+                    img.src  = 'https://em-content.zobj.net/source/apple/453/red-heart_2764-fe0f.png';
+                    img.alt  = '❤️';
+                    img.width  = 22;
+                    img.height = 22;
+                    img.className = 'heart-pop';
+                    mamaSlot.appendChild(img);
+                });
             });
         }
 

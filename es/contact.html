@@ -66,7 +66,7 @@
             transition: opacity .8s ease;
         }
         .success-overlay.active .success-overlay__bg {
-            opacity: .97;
+            opacity: 0;
         }
         .success-overlay__content {
             position: relative;
@@ -169,24 +169,13 @@
             <!-- Desktop Navigation -->
             <nav class="nav nav--desktop">
                 <ul class="nav__list">
-                    <li class="nav__item has-submenu">
-                        <a  href="./work.html">Trabajos</a>
-                        <ul class="submenu">
-                        <li><a href="./works/dialogogeneracional.html">Diálogo generacional</a></li>
-                        <li><a href="./works/museomemorial.html">Museo Memorial</a></li>
-                        <li><a class="link" href="./work.html">Ver todos</a></li>
-                        </ul>
-                    </li>
+                    <li class="nav__item">
+                    <a  href="./work.html">Trabajos</a>
+                </li>
 
-                    <li class="nav__item has-submenu">
-                        <a  href="./photos.html">Fotos</a>
-                        <ul class="submenu">
-                            <li><a href="./photos/favoritas.html">Mis Favoritas</a></li>
-                            <li><a href="./photos/vietnam.html">Vietnam</a></li>
-                            <li><a href="./photos/tailandia.html">Tailandia</a></li>
-                            <li><a class="link" href="./photos.html">Ver todos</a></li>
-                        </ul>
-                    </li>
+                    <li class="nav__item">
+                    <a  href="./photos.html">Fotos</a>
+                </li>
 
                     <li class="nav__item">
                         <a href="./about.html">Sobre mí</a>
@@ -319,7 +308,7 @@
         </section>
 
 
-        <section style="padding-bottom: 8px; flex-shrink: 0;" class="wrapper">
+        <section style="padding-bottom: 8px;" class="wrapper">
             <div class="general_footer">
             <div class="general_footer_buttons">
                 <div class="logo_animado">
@@ -783,6 +772,13 @@
                 }
             });
 
+            /* ── Click anywhere to close ── */
+            overlay.addEventListener('click', function () {
+                if (overlay.classList.contains('active')) {
+                    window.closeSuccess();
+                }
+            });
+
             /* ── Intercept form submit → send via fetch, then show overlay ── */
             var form = document.getElementById('contactForm');
             if (form) {
@@ -802,7 +798,6 @@
                     }).then(function (response) {
                         if (response.ok) {
                             form.reset();
-                            /* Remove any lingering error states */
                             form.querySelectorAll('.input-group').forEach(function (g) {
                                 g.classList.remove('error');
                             });
