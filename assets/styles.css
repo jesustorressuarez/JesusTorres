@@ -298,10 +298,10 @@ html.lenis, html.lenis body {
 }
 
 .footer_home ul li a {
-    font-size: 1.000rem;
+    font-size: 0.778rem;
     font-weight: var(--text-regular);
     color: var(--General-200);
-    letter-spacing: -0.72px;
+    letter-spacing: -0.50px;
     text-decoration: none;
 }
 
@@ -339,6 +339,23 @@ html.lenis, html.lenis body {
     gap: 24px;
 }
 
+.general_footer_buttons ul li a {
+    color: var(--General-200);
+    display: flex;
+    align-items: center;
+    transition: color 0.3s ease-in-out;
+}
+
+.general_footer_buttons ul li a:hover {
+    color: var(--General-400);
+}
+
+.general_footer_buttons ul li a svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
 .general_footer_credits {
     display: flex;
     gap: 12px;
@@ -368,6 +385,57 @@ html.lenis, html.lenis body {
     justify-content: center;
 }
 
+/* Heartbeat animation — ritmo natural: lub-dub + pausa larga */
+.heart-beat {
+    animation: heartbeat 1.8s ease-in-out infinite;
+    transform-origin: center center;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+
+.heart-beat:hover {
+    filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
+}
+
+.heart-click-pulse {
+    animation: click-pulse 0.3s ease-out forwards, heartbeat 1.8s ease-in-out 0.3s infinite;
+}
+
+@keyframes heartbeat {
+    0%   { transform: scale(1); }
+    8%   { transform: scale(1.18); }
+    15%  { transform: scale(1); }
+    22%  { transform: scale(1.12); }
+    30%  { transform: scale(1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes click-pulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.6); }
+    100% { transform: scale(1); }
+}
+
+/* Heart rain overlay */
+.rain-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.rain-heart {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    will-change: transform;
+}
+
 /* Logo animado + word rotator */
 
 .logo_animado {
@@ -391,29 +459,28 @@ html.lenis, html.lenis body {
     font-weight: var(--text-light);
     color: var(--General-300);
     height: 1.2em;
-    overflow: hidden;
     position: relative;
-    width: 9.111rem;
+    display: inline-flex;
+    align-items: center;
 }
 
-.rotating-word {
-    display: block;
-    position: absolute;
+.typewriter-text {
     white-space: nowrap;
-    opacity: 0;
-    animation: wordRotate 6s infinite ease-in-out;
 }
 
-.rotating-word:nth-child(1) { animation-delay: 0s; }
-.rotating-word:nth-child(2) { animation-delay: 2s; }
-.rotating-word:nth-child(3) { animation-delay: 4s; }
+.typewriter-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: var(--General-300);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.7s step-end infinite;
+}
 
-@keyframes wordRotate {
-    0%  { transform: translateY(100%);  opacity: 0; }
-    10% { transform: translateY(0);     opacity: 1; }
-    30% { transform: translateY(0);     opacity: 1; }
-    40% { transform: translateY(-100%); opacity: 0; }
-    100%{ transform: translateY(-100%); opacity: 0; }
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0; }
 }
 
 /* ═══════════════════════════════════════════
@@ -1181,7 +1248,7 @@ input[type="tel"] {
         position: inherit;
         writing-mode: vertical-rl;
         transform: rotate(180deg);
-        font-size: 4.000rem;
+        font-size: 2.500rem;
     }
 
     .column:hover .label {
@@ -1292,36 +1359,98 @@ input[type="tel"] {
 
     /* Hero complex */
     .hero_complex {
-        padding: 80px 0 40px 0
+        padding: 80px 0 40px 0;
     }
 
     .hero_heading {
         flex-direction: column;
+        align-items: flex-start;
     }
 
-    .hero_title{
+    .hero_title {
         width: 100%;
     }
 
-    .hero_title h1{
-        flex: 0 0 auto;
+    .hero_title h1 {
         font-size: 2.833rem;
         letter-spacing: -2.04px;
     }
 
-    .hero_heading h2{
+    .hero_title h2 {
         font-size: 2.000rem;
-        letter-spacing: -2.04px;
+        letter-spacing: -1.44px;
     }
 
-    .hero_heading p{
+    .hero_heading p {
         font-size: 1.000rem;
         letter-spacing: -0.72px;
-        padding: 0;
     }
 
-    .hero_details_text{
+    .hero_details_text {
         flex-direction: column;
+        gap: 16px;
+    }
+
+    .hero_details_column {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .hero_details img {
+        height: 250px;
+    }
+
+    /* Footer home */
+    .footer_home {
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .footer_home ul {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    /* Carousel */
+    .slide {
+        flex: 0 0 100%;
+    }
+
+    .carousel-track {
+        gap: 16px;
+        height: 280px;
+    }
+
+    /* Galería de fotos */
+    .is-gallery .slide {
+        height: 220px;
+    }
+
+    /* Modal zoom */
+    .close-btn {
+        top: 12px;
+        right: 12px;
+        font-size: 2.500rem;
+        padding: 8px;
+    }
+
+    .modal-nav {
+        top: auto;
+        bottom: 24px;
+        transform: none;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 50%;
+    }
+
+    .prev-modal {
+        left: 24px;
+    }
+
+    .next-modal {
+        right: 24px;
     }
 }
 
@@ -1335,5 +1464,14 @@ input[type="tel"] {
 @media (min-width: 1800px) {
     .grid-variable{
         grid-template-columns: repeat(3, 1fr);
+    }
+
+    .footer_home ul {
+        gap: 48px;
+    }
+
+    .footer_home ul li a {
+        font-size: 1.000rem;
+        letter-spacing: -0.72px;
     }
 }

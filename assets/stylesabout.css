@@ -135,6 +135,13 @@
   }
 }
 
+/* Más espaciado horizontal en pantallas grandes */
+@media (min-width: 769px) {
+  .marquee__content span {
+    word-spacing: 0.15em;
+  }
+}
+
 /* Opcional: Pausa el cintillo cuando pasas el ratón por encima */
 .marquee:hover .marquee__content {
   animation-play-state: paused;
@@ -253,7 +260,7 @@ a.big_button {
 
     .about_intro img{
         width: 100%;
-        height: 400px;
+        height: 280px;
     }
 
     .about_intro_content{
@@ -298,5 +305,9 @@ a.big_button {
         object-fit: contain;
         object-position: bottom;
     }
-    
+
+    /* Marquee más lento en mobile */
+    .marquee__content {
+        animation-duration: 25s;
+    }
 }

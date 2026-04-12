@@ -22,6 +22,124 @@
             line-height: 1.15 !important;
             transition: font-family 0.05s, font-size 0.15s ease;
         }
+        .hero-cursor {
+            display: none;
+            width: 3px;
+            height: 20px;
+            background: #262626;
+            margin-left: 6px;
+            vertical-align: baseline;
+            position: relative;
+            top: 3px;
+        }
+        .hero-cursor.visible {
+            display: inline-block;
+            animation: cursorBlink 1s step-end infinite;
+        }
+        @keyframes cursorBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* ── SUCCESS OVERLAY ── */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .5s ease;
+        }
+        .success-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .success-overlay__bg {
+            position: absolute;
+            inset: 0;
+            background: var(--General-100, #f2f2f2);
+            opacity: 0;
+            transition: opacity .8s ease;
+        }
+        .success-overlay.active .success-overlay__bg {
+            opacity: .97;
+        }
+        .success-overlay__content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .success-overlay__gif {
+            width: min(65vw, 340px);
+            opacity: 0;
+            transform: scale(.3) rotate(-10deg);
+            transition: opacity .4s ease .2s, transform .6s cubic-bezier(.17,.67,.29,1.3) .2s;
+        }
+        .success-overlay.active .success-overlay__gif {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+        .success-overlay__gif img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .success-overlay__text-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 24px;
+        }
+        .success-overlay__gracias {
+            white-space: nowrap;
+            overflow: visible !important;
+            line-height: 1.15 !important;
+            font-size: clamp(2.5rem, 9vw, 5.667rem);
+            font-weight: var(--text-black, 900);
+            color: var(--General-400, #262626);
+            letter-spacing: -3.5px;
+            transition: font-family 0.05s, font-size 0.15s ease;
+            opacity: 0;
+            transform: scale(.5);
+            transition: opacity .3s ease .5s, transform .5s cubic-bezier(.34,1.56,.64,1) .5s, font-family 0.05s, font-size 0.15s ease;
+        }
+        .success-overlay.active .success-overlay__gracias {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .success-overlay__gracias .hero-cursor {
+            background: var(--General-400, #262626);
+        }
+        .success-overlay__sub {
+            margin-top: 12px;
+            font-family: 'Inter', sans-serif;
+            font-weight: var(--text-regular, 400);
+            font-size: clamp(0.75rem, 2vw, 0.9rem);
+            color: var(--General-200, #999);
+            letter-spacing: 0.5px;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity .4s ease 1s, transform .4s ease 1s;
+        }
+        .success-overlay.active .success-overlay__sub {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .success-overlay .confetti-canvas {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .success-overlay .close-btn {
+            color: var(--General-400, #262626);
+        }
     </style>
 
 </head>
@@ -56,7 +174,7 @@
                         <ul class="submenu">
                         <li><a href="./works/dialogogeneracional.html">Diálogo generacional</a></li>
                         <li><a href="./works/museomemorial.html">Museo Memorial</a></li>
-                        <li><a id="link" href="./work.html">Ver todos</a></li>
+                        <li><a class="link" href="./work.html">Ver todos</a></li>
                         </ul>
                     </li>
 
@@ -66,7 +184,7 @@
                             <li><a href="./photos/favoritas.html">Mis Favoritas</a></li>
                             <li><a href="./photos/vietnam.html">Vietnam</a></li>
                             <li><a href="./photos/tailandia.html">Tailandia</a></li>
-                            <li><a id="link" href="./photos.html">Ver todos</a></li>
+                            <li><a class="link" href="./photos.html">Ver todos</a></li>
                         </ul>
                     </li>
 
@@ -107,7 +225,7 @@
                         <ul>
                             <li><a href="./works/dialogogeneracional.html">Diálogo generacional</a></li>
                             <li><a href="./works/museomemorial.html">Museo Memorial</a></li>
-                            <li><a id="link" href="./work.html">Ver todos</a></li>
+                            <li><a class="link" href="./work.html">Ver todos</a></li>
                         </ul>
                     </li>
 
@@ -117,7 +235,7 @@
                             <li><a href="./photos/favoritas.html">Mis Favoritas</a></li>
                             <li><a href="./photos/vietnam.html">Vietnam</a></li>
                             <li><a href="./photos/tailandia.html">Tailandia</a></li>
-                            <li><a id="link" href="./photos.html">Ver todos</a></li>
+                            <li><a class="link" href="./photos.html">Ver todos</a></li>
                         </ul>
                     </li>
 
@@ -152,9 +270,7 @@
 
         <section class="wrapper">
             <div class="hero_simply">
-            <h1 id="heroTitle">
-                ¿Hablamos?
-            </h1>
+            <h1 id="heroTitle">¿Hablamos?<span class="hero-cursor" id="heroCursor"></span></h1>
             <p>
                 Si te apetece que hablemos, puedes dejarme un mensaje a través del formulario. Y si eres más de email, copia este mail <span id="emailCopiar" onclick="copiarEmail(event)">jesustorresgr@gmail.com</span> y escríbeme directamente. Estaré encantado de leerte.
             </p>
@@ -165,7 +281,7 @@
         <section class="wrapper" style="flex: 1;">
             <div class="grid-12">
                 <div class="form-container">
-                    <form id="contactForm" action="https://formspree.io/f/TU_EMAIL_AQUI" method="POST" novalidate>
+                    <form id="contactForm" action="https://formspree.io/f/xrerzgwl" method="POST" novalidate>
                         
                         <div class="input-group">
                             <input type="text" id="nombre" name="name" autocomplete="name" required placeholder=" ">
@@ -228,14 +344,20 @@
                 </div>
                 </div>
                 <ul>            
-                    <li class="nav__item"><a href="https://www.linkedin.com/in/jesustorressuarez/" target="_blank" rel="noopener noreferrer">Linkedin</a></li>
-                    <li class="nav__item"><a href="https://www.instagram.com/jesustorres.raw/" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-                    <li class="nav__item"><a href="mailto:jesustorresgr@gmail.com">E-mail</a></li>
-                </ul>
+                <li class="nav__item"><a href="https://www.linkedin.com/in/jesustorressuarez/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a></li>
+                <li class="nav__item"><a href="https://www.instagram.com/jesustorres.raw/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405a1.441 1.441 0 11-2.88 0 1.441 1.441 0 012.88 0z"/></svg>
+                </a></li>
+                <li class="nav__item"><a href="mailto:jesustorresgr@gmail.com" aria-label="E-mail">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg>
+                </a></li>
+            </ul>
             </div>
             <div class="general_footer_credits">
                 <div class="autor">
-                <p class="body-small">Designed with <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg" alt="❤️" width="14" height="14" style="vertical-align: middle; display: inline-block;"> by</p>
+                <p class="body-small">Designed with <img class="heart-beat" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg" alt="❤️" width="14" height="14" style="vertical-align: middle; display: inline-block;"> by</p>
                 <a href="https://javiexe.github.io/javiexe/index.html" target="_blank" rel="noopener noreferrer" class="body-small-bold link">Javi.exe</a>
                 </div>
                 <p class="body-small">© 2026</p>
@@ -245,6 +367,21 @@
 
     </div>
 
+    <!-- ── SUCCESS OVERLAY ── -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-overlay__bg"></div>
+        <canvas class="confetti-canvas" id="confettiCanvas"></canvas>
+        <span class="close-btn" onclick="closeSuccess()">&times;</span>
+        <div class="success-overlay__content">
+            <div class="success-overlay__gif">
+                <img src="../assets/img/jesus-dancing.gif" alt="Jesús bailando">
+            </div>
+            <div class="success-overlay__text-block">
+                <h2 class="success-overlay__gracias" id="graciasTitle">Gracias!<span class="hero-cursor" id="graciasCursor"></span></h2>
+                <p class="success-overlay__sub">Te responderé lo antes posible</p>
+            </div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
     <script>
@@ -266,7 +403,17 @@
     <script>
         (function () {
             var el = document.getElementById('heroTitle');
+            var cursorEl = document.getElementById('heroCursor');
             if (!el) return;
+
+            // Eliminar nodo de texto original del HTML y crear uno controlado
+            while (el.firstChild !== cursorEl) { el.removeChild(el.firstChild); }
+            var textNode = document.createTextNode('');
+            el.insertBefore(textNode, cursorEl);
+
+            function setText(str) { textNode.nodeValue = str; }
+            function showCursor() { cursorEl.classList.add('visible'); }
+            function hideCursor() { cursorEl.classList.remove('visible'); }
 
             function getBaseFontSize() {
                 return window.innerWidth <= 768 ? 2.833 : 5.667;
@@ -313,6 +460,7 @@
 
             function scrambleTo(target, phrase, callback) {
                 clearInterval(scrambleInterval);
+                hideCursor();
                 var frame = 0;
                 var LOCK_FROM = 2;
                 var LOCK_TO = SCRAMBLE_FRAMES - 1;
@@ -340,11 +488,12 @@
                                 result += chars[Math.floor(Math.random() * chars.length)];
                             }
                         }
-                        el.textContent = result;
+                        setText(result);
                         frame++;
                     } else {
-                        el.textContent = target;
+                        setText(target);
                         clearInterval(scrambleInterval);
+                        showCursor();
                         if (callback) callback();
                     }
                 }, FRAME_SPEED);
@@ -365,23 +514,305 @@
                 el.style.fontFamily = p.font;
                 el.style.fontStyle = p.fontStyle;
                 el.style.fontSize = (BASE_FONT_SIZE * p.scale) + 'rem';
-                el.textContent = p.text;
+                setText(p.text);
             });
 
             calcScales();
-            // Arrancar con scramble visible desde el primer momento
+            // Arrancar con scramble inicial más largo (700ms)
             var first = phrases[0];
             el.style.fontFamily = first.font;
             el.style.fontStyle = first.fontStyle;
             el.style.fontSize = (BASE_FONT_SIZE * first.scale) + 'rem';
-            el.textContent = first.text.replace(/./g, function() {
-                return chars[Math.floor(Math.random() * chars.length)];
-            });
-            setTimeout(function() {
-                scrambleTo(first.text, first, function () {
+
+            var INTRO_FRAMES = 18;
+            var INTRO_SPEED = Math.round(700 / INTRO_FRAMES);
+            var INTRO_LOCK_FROM = 10;
+            var introFrame = 0;
+
+            var introLockFrames = [];
+            for (var i = 0; i < first.text.length; i++) {
+                if (first.text[i] === ' ') {
+                    introLockFrames.push(0);
+                } else {
+                    introLockFrames.push(INTRO_LOCK_FROM + Math.floor(Math.random() * (INTRO_FRAMES - INTRO_LOCK_FROM)));
+                }
+            }
+
+            var introInterval = setInterval(function () {
+                if (introFrame < INTRO_FRAMES) {
+                    var result = '';
+                    for (var i = 0; i < first.text.length; i++) {
+                        if (introFrame >= introLockFrames[i]) {
+                            result += first.text[i];
+                        } else {
+                            result += chars[Math.floor(Math.random() * chars.length)];
+                        }
+                    }
+                    setText(result);
+                    introFrame++;
+                } else {
+                    setText(first.text);
+                    clearInterval(introInterval);
+                    showCursor();
+                    animTimeout = setTimeout(next, PAUSE);
+                }
+            }, INTRO_SPEED);
+        })();
+    </script>
+
+    <!-- ── SUCCESS OVERLAY: confetti + scramble "Gracias!" ── -->
+    <script>
+        (function () {
+            var overlay = document.getElementById('successOverlay');
+            var graciasEl = document.getElementById('graciasTitle');
+            var graciasCursor = document.getElementById('graciasCursor');
+            if (!overlay || !graciasEl) return;
+
+            /* ── Text node setup (same pattern as hablamos) ── */
+            while (graciasEl.firstChild !== graciasCursor) { graciasEl.removeChild(graciasEl.firstChild); }
+            var textNode = document.createTextNode('');
+            graciasEl.insertBefore(textNode, graciasCursor);
+
+            function setText(str) { textNode.nodeValue = str; }
+            function showCursor() { graciasCursor.classList.add('visible'); }
+            function hideCursor() { graciasCursor.classList.remove('visible'); }
+
+            /* ── Phrases (same structure as hablamos) ── */
+            var phrases = [
+                { text: 'Gracias!',      font: "'Inter', sans-serif",           fontStyle: 'normal' },
+                { text: 'Thank you!',    font: "'DM Serif Text', serif",        fontStyle: 'normal' },
+                { text: 'ありがとう！',     font: "'Noto Sans JP', sans-serif",    fontStyle: 'normal' },
+                { text: 'Danke!',        font: "'UnifrakturMaguntia', cursive", fontStyle: 'normal' },
+                { text: 'Grazie!',       font: "'Playfair Display', serif",     fontStyle: 'italic' },
+                { text: '謝謝！',          font: "'Noto Sans TC', sans-serif",    fontStyle: 'normal' }
+            ];
+
+            var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz¿?¡!@#&あ漢話聊';
+            var PAUSE = 2000;
+            var SCRAMBLE_FRAMES = 5;
+            var FRAME_SPEED = Math.round(200 / SCRAMBLE_FRAMES);
+            var currentIdx = 0;
+            var scrambleInterval = null;
+            var animTimeout = null;
+
+            /* ── Auto-scale (same logic as hablamos) ── */
+            function getBaseFontSize() {
+                return window.innerWidth <= 768 ? 2.5 : 5.667;
+            }
+            var BASE_FONT_SIZE = getBaseFontSize();
+
+            function calcScales() {
+                BASE_FONT_SIZE = getBaseFontSize();
+                var containerWidth = window.innerWidth * 0.85;
+                var measureEl = document.createElement('span');
+                measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:-3.5px;';
+                document.body.appendChild(measureEl);
+                phrases.forEach(function (p) {
+                    measureEl.style.fontFamily = p.font;
+                    measureEl.style.fontStyle = p.fontStyle;
+                    measureEl.style.fontSize = BASE_FONT_SIZE + 'rem';
+                    measureEl.textContent = p.text;
+                    var textWidth = measureEl.offsetWidth;
+                    p.scale = textWidth > containerWidth ? (containerWidth / textWidth) : 1;
+                });
+                document.body.removeChild(measureEl);
+            }
+
+            /* ── Scramble (identical to hablamos) ── */
+            function scrambleTo(target, phrase, callback) {
+                clearInterval(scrambleInterval);
+                hideCursor();
+                var frame = 0;
+                var LOCK_FROM = 2;
+                var LOCK_TO = SCRAMBLE_FRAMES - 1;
+
+                graciasEl.style.fontFamily = phrase.font;
+                graciasEl.style.fontStyle = phrase.fontStyle;
+                graciasEl.style.fontSize = (BASE_FONT_SIZE * phrase.scale) + 'rem';
+
+                var lockFrames = [];
+                for (var i = 0; i < target.length; i++) {
+                    if (target[i] === ' ') { lockFrames.push(0); }
+                    else { lockFrames.push(LOCK_FROM + Math.floor(Math.random() * (LOCK_TO - LOCK_FROM + 1))); }
+                }
+
+                scrambleInterval = setInterval(function () {
+                    if (frame < SCRAMBLE_FRAMES) {
+                        var result = '';
+                        for (var i = 0; i < target.length; i++) {
+                            if (frame >= lockFrames[i]) { result += target[i]; }
+                            else { result += chars[Math.floor(Math.random() * chars.length)]; }
+                        }
+                        setText(result);
+                        frame++;
+                    } else {
+                        setText(target);
+                        clearInterval(scrambleInterval);
+                        showCursor();
+                        if (callback) callback();
+                    }
+                }, FRAME_SPEED);
+            }
+
+            function next() {
+                currentIdx = (currentIdx + 1) % phrases.length;
+                var p = phrases[currentIdx];
+                scrambleTo(p.text, p, function () {
                     animTimeout = setTimeout(next, PAUSE);
                 });
-            }, 300);
+            }
+
+            /* ── Confetti ── */
+            var canvas = document.getElementById('confettiCanvas');
+            var ctx = canvas.getContext('2d');
+            var particles = [], confettiRunning = false, confettiRAF;
+            var colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6eb4','#a66cff','#262626'];
+
+            function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+            window.addEventListener('resize', function () { resizeCanvas(); calcScales(); });
+            resizeCanvas();
+
+            function Particle() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height * -.5 - 50;
+                this.w = Math.random() * 10 + 5;
+                this.h = Math.random() * 6 + 3;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.vy = Math.random() * 3 + 2;
+                this.vx = (Math.random() - .5) * 2;
+                this.rot = Math.random() * 360;
+                this.rv = (Math.random() - .5) * 8;
+            }
+
+            function spawnBurst() { for (var i = 0; i < 120; i++) particles.push(new Particle()); }
+
+            function drawConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (var i = particles.length - 1; i >= 0; i--) {
+                    var p = particles[i];
+                    p.x += p.vx; p.y += p.vy; p.rot += p.rv;
+                    if (p.y > canvas.height + 20) { particles.splice(i, 1); continue; }
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot * Math.PI / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                    ctx.restore();
+                }
+                if (confettiRunning || particles.length > 0) confettiRAF = requestAnimationFrame(drawConfetti);
+            }
+
+            function startConfetti() {
+                confettiRunning = true;
+                spawnBurst(); drawConfetti();
+                setTimeout(spawnBurst, 800);
+                setTimeout(spawnBurst, 1600);
+                setTimeout(function () { confettiRunning = false; }, 3000);
+            }
+
+            function stopConfetti() {
+                confettiRunning = false;
+                particles = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (confettiRAF) cancelAnimationFrame(confettiRAF);
+            }
+
+            /* ── Open / Close ── */
+            function openSuccess() {
+                calcScales();
+                currentIdx = 0;
+                var first = phrases[0];
+                graciasEl.style.fontFamily = first.font;
+                graciasEl.style.fontStyle = first.fontStyle;
+                graciasEl.style.fontSize = (BASE_FONT_SIZE * first.scale) + 'rem';
+                setText('');
+                hideCursor();
+
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                if (typeof lenis !== 'undefined') lenis.stop();
+
+                startConfetti();
+
+                /* Intro scramble (longer, like hablamos intro) */
+                var INTRO_FRAMES = 18;
+                var INTRO_SPEED = Math.round(700 / INTRO_FRAMES);
+                var INTRO_LOCK_FROM = 10;
+                var introFrame = 0;
+
+                var introLockFrames = [];
+                for (var i = 0; i < first.text.length; i++) {
+                    if (first.text[i] === ' ') { introLockFrames.push(0); }
+                    else { introLockFrames.push(INTRO_LOCK_FROM + Math.floor(Math.random() * (INTRO_FRAMES - INTRO_LOCK_FROM))); }
+                }
+
+                var introInterval = setInterval(function () {
+                    if (introFrame < INTRO_FRAMES) {
+                        var result = '';
+                        for (var i = 0; i < first.text.length; i++) {
+                            if (introFrame >= introLockFrames[i]) { result += first.text[i]; }
+                            else { result += chars[Math.floor(Math.random() * chars.length)]; }
+                        }
+                        setText(result);
+                        introFrame++;
+                    } else {
+                        setText(first.text);
+                        clearInterval(introInterval);
+                        showCursor();
+                        animTimeout = setTimeout(next, PAUSE);
+                    }
+                }, INTRO_SPEED);
+            }
+
+            window.closeSuccess = function () {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+                if (typeof lenis !== 'undefined') lenis.start();
+                stopConfetti();
+                clearInterval(scrambleInterval);
+                clearTimeout(animTimeout);
+                setText('');
+                hideCursor();
+                currentIdx = 0;
+            };
+
+            /* ── ESC to close ── */
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && overlay.classList.contains('active')) {
+                    window.closeSuccess();
+                }
+            });
+
+            /* ── Intercept form submit → send via fetch, then show overlay ── */
+            var form = document.getElementById('contactForm');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    /* Let the existing validation in scripts.js run first.
+                       If it called e.preventDefault(), we should not proceed. */
+                    if (e.defaultPrevented) return;
+
+                    e.preventDefault();
+
+                    var formData = new FormData(form);
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    }).then(function (response) {
+                        if (response.ok) {
+                            form.reset();
+                            /* Remove any lingering error states */
+                            form.querySelectorAll('.input-group').forEach(function (g) {
+                                g.classList.remove('error');
+                            });
+                            openSuccess();
+                        }
+                    }).catch(function () {
+                        /* Silently fail — the form was already validated */
+                    });
+                });
+            }
         })();
     </script>
 
