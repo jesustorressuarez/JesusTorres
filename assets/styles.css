@@ -830,7 +830,6 @@ html.lenis, html.lenis body {
     scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     scrollbar-width: none;
-    padding-right: 1%;
 }
 
 .carousel-track::-webkit-scrollbar {
@@ -838,7 +837,7 @@ html.lenis, html.lenis body {
 }
 
 .slide {
-    flex: 0 0 92%;
+    flex: 0 0 100%;
     scroll-snap-align: start;
 }
 
