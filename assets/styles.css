@@ -1460,7 +1460,7 @@ input[type="tel"] {
     }
 
     .hero_details_column {
-        flex-direction: column;
+        flex-direction: row;
         gap: 16px;
     }
 
