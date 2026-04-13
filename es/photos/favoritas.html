@@ -95,39 +95,18 @@
         <div aria-hidden="true" style="visibility: hidden; height: 1em;">&nbsp;</div>
         <nav class="mobile-nav">
             <ul>
-                <li>
-                    <a  href="../work.html">Trabajos</a>
-                    <ul>
-                        <li><a href="../works/dialogogeneracional.html">Diálogo generacional</a></li>
-                        <li><a href="../works/museomemorial.html">Museo Memorial</a></li>
-                        <li><a class="link" href="../work.html">Ver todos</a></li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a  href="../photos.html">Fotos</a>
-                    <ul>
-                        <li><a href="./vietnam.html">Vietnam</a></li>
-                        <li><a href="./macro.html">Macro</a></li>
-                        <li><a href="./naturaleza.html">Naturaleza</a></li>
-                        <li><a class="link" href="../photos.html">Ver todos</a></li>
-                    </ul>
-                </li>
-
-                <li>
-                    <a href="../about.html">Sobre mí</a>
-                </li>
-                <li>
-                    <a class="active" href="../contact.html">Contacto</a>
-                </li>
+                <li><a href="../work.html">Trabajos</a></li>
+                <li><a class="active" href="../photos.html">Fotos</a></li>
+                <li><a href="../about.html">Sobre mí</a></li>
+                <li><a href="../contact.html">Contacto</a></li>
             </ul>
         </nav>
 
         <div class="lang-selector lang-selector--mobile">
-            <a class="active" href="../../es/index.html">ES</a>
-            <a href="../../en/index.html">EN</a>
-            <a href="../../de/index.html">DE</a>
-            <a href="../../it/index.html">IT</a>
+            <a class="active" href="../../es/index.html">ES<span class="lang-tooltip"><img src="https://flagcdn.com/16x12/es.png" alt="" width="16" height="12"> El español es mi lengua materna</span></a>
+            <a href="../../en/index.html">EN<span class="lang-tooltip"><img src="https://flagcdn.com/16x12/gb.png" alt="" width="16" height="12"> I speak advanced English fluently</span></a>
+            <a href="../../de/index.html">DE<span class="lang-tooltip"><img src="https://flagcdn.com/16x12/de.png" alt="" width="16" height="12"> Ich lerne derzeit Deutsch</span></a>
+            <a href="../../it/index.html">IT<span class="lang-tooltip"><img src="https://flagcdn.com/16x12/it.png" alt="" width="16" height="12"> Adoro l'italiano, lo parlo con scioltezza</span></a>
         </div>
     </div>
 
@@ -310,13 +289,58 @@
 
         <div id="zoomModal" class="modal">
             <span class="close-btn" onclick="closeZoom()">&times;</span>
-            
+
             <button class="modal-nav prev-modal" onclick="changeModalImage(-1, event)">
                 <span class="chevron"></span>
             </button>
-            
-            <div class="zoom-wrapper" id="zoomWrapper">
-                <img id="imgZoom" src="" alt="Vista ampliada">
+
+            <div class="modal-content-wrapper" id="modalContentWrapper">
+                <div class="zoom-wrapper" id="zoomWrapper">
+                    <img id="imgZoom" src="" alt="Vista ampliada">
+                </div>
+
+                <div class="metadata-panel" id="metadataPanel">
+                    <div class="metadata-info">
+                        <div class="metadata-header">
+                            <div class="metadata-header-left">
+                                <span class="metadata-title" id="metaTitle"></span>
+                                <span class="metadata-date-location" id="metaDateLocation"></span>
+                            </div>
+                            <button class="metadata-toggle" id="metadataToggle" onclick="window.toggleMetadata(event)">
+                                <span class="metadata-toggle-text">Ver más</span>
+                                <svg class="metadata-chevron" width="14" height="7" viewBox="0 0 14 7" fill="none">
+                                    <path d="M1 1L7 6L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="metadata-description" id="metaDescription"></p>
+                    </div>
+                    <div class="metadata-technical" id="metaTechnical">
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Cámara</span>
+                            <span class="metadata-tech-value" id="metaCamera"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Objetivo</span>
+                            <span class="metadata-tech-value" id="metaLens"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Focal · Apertura</span>
+                            <span class="metadata-tech-value" id="metaFocalAperture"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">VEL · ISO</span>
+                            <span class="metadata-tech-value" id="metaSpeedIso"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="metadata-toggle-floating" id="metadataToggleFloating" onclick="window.toggleMetadata(event)">
+                    <span class="metadata-toggle-text">Ver más</span>
+                    <svg class="metadata-chevron" width="14" height="7" viewBox="0 0 14 7" fill="none">
+                        <path d="M1 1L7 6L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
 
             <button class="modal-nav next-modal" onclick="changeModalImage(1, event)">
@@ -448,6 +472,63 @@
         requestAnimationFrame(raf);
     </script>
 
+    <!-- METADATA OBJECT FOR PHOTO VIEWER -->
+    <script>
+        window.photoMetadata = {
+            "../../assets/img/favoritas/IMG_0684.avif": {"date":"2023:09:11 04:51:46","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/160s","iso":"100"},
+            "../../assets/img/favoritas/IMG_0685.avif": {"date":"2023:09:11 04:51:49","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"96.0","aperture":"5.0","speed":"1/160s","iso":"100"},
+            "../../assets/img/favoritas/IMG_0713.avif": {"date":"2023:09:11 05:33:37","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"8.0","speed":"1/160s","iso":"100"},
+            "../../assets/img/favoritas/IMG_0800 (1).avif": {"date":"2023:09:11 06:05:31","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"100"},
+            "../../assets/img/favoritas/IMG_0973.avif": {"date":"2023:09:13 05:55:18","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"11.0","speed":"1/100s","iso":"200"},
+            "../../assets/img/favoritas/IMG_0985.avif": {"date":"2023:09:13 09:25:50","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"100"},
+            "../../assets/img/favoritas/IMG_1426.avif": {"date":"2023:09:14 03:26:38","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/60s","iso":"400"},
+            "../../assets/img/favoritas/IMG_1597.avif": {"date":"2020:03:23 11:29:10","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/250s","iso":"100"},
+            "../../assets/img/favoritas/IMG_2059.avif": {"date":"2023:09:19 08:44:22","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/160s","iso":"400"},
+            "../../assets/img/favoritas/IMG_2107.avif": {"date":"2023:09:19 09:22:53","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/160s","iso":"400"},
+            "../../assets/img/favoritas/IMG_2140.avif": {"date":"2023:09:22 05:09:18","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/400s","iso":"400"},
+            "../../assets/img/favoritas/IMG_2145.avif": {"date":"2023:09:22 05:10:18","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/640s","iso":"400"},
+            "../../assets/img/favoritas/IMG_2353 (1).avif": {"date":"2023:09:22 09:28:55","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"7.1","speed":"1/100s","iso":"400"},
+            "../../assets/img/favoritas/IMG_2418.avif": {"date":"2023:09:30 10:17:46","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"96.0","aperture":"5.0","speed":"1/100s","iso":"3200"},
+            "../../assets/img/favoritas/IMG_2455.avif": {"date":"2023:10:03 12:15:42","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/100s","iso":"1600"},
+            "../../assets/img/favoritas/IMG_2565.avif": {"date":"2023:10:07 05:52:14","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/100s","iso":"100"},
+            "../../assets/img/favoritas/IMG_2732.avif": {"date":"2020:08:13 23:42:36","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"18.0","aperture":"4.5","speed":"20.0s","iso":"3200"},
+            "../../assets/img/favoritas/IMG_2736.avif": {"date":"2023:10:07 09:23:39","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/125s","iso":"200"},
+            "../../assets/img/favoritas/IMG_3058.avif": {"date":"2023:10:08 10:35:32","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"179.0","aperture":"5.6","speed":"1/400s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3094-1.avif": {"date":"2023:10:09 04:45:11","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/400s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3111.avif": {"date":"2020:08:16 12:14:33","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"28.0","aperture":"4.5","speed":"1/640s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3131.avif": {"date":"2023:10:09 05:20:52","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/250s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3148.avif": {"date":"2020:08:16 12:37:24","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/400s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3149.avif": {"date":"2020:08:16 12:39:22","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/400s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3328.avif": {"date":"2023:10:12 04:49:42","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"163.0","aperture":"5.6","speed":"1/500s","iso":"100"},
+            "../../assets/img/favoritas/IMG_3415.avif": {"date":"2023:10:12 08:03:21","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/100s","iso":"100"},
+            "../../assets/img/favoritas/IMG_4502.avif": {"title":"Mi preciosa Abuela","location":"La Calahorra","description":"Un día con mi abuela","date":"2019:10:12 13:12:30","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"123.0","aperture":"5.0","speed":"1/50s","iso":"6400"},
+            "../../assets/img/favoritas/IMG_4526.avif": {"date":"2019:10:12 13:23:52","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"96.0","aperture":"5.0","speed":"1/100s","iso":"6400"},
+            "../../assets/img/favoritas/IMG_4715.avif": {"date":"2019:10:13 12:55:10","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/160s","iso":"100"},
+            "../../assets/img/favoritas/IMG_4764.avif": {"date":"2019:10:13 13:02:38","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"163.0","aperture":"5.6","speed":"1/500s","iso":"100"},
+            "../../assets/img/favoritas/IMG_5348-2.avif": {"date":"2021:07:23 08:26:47","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/160s","iso":"400"},
+            "../../assets/img/favoritas/IMG_6170.avif": {"date":"2019:11:16 17:47:20","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/400s","iso":"100"},
+            "../../assets/img/favoritas/IMG_6626.avif": {"date":"2019:11:22 20:03:42","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"146.0","aperture":"5.0","speed":"1/160s","iso":"6400"},
+            "../../assets/img/favoritas/IMG_7116.avif": {"date":"2019:11:24 13:23:34","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"32.0","aperture":"4.5","speed":"1/200s","iso":"100"},
+            "../../assets/img/favoritas/IMG_7122.avif": {"date":"2019:11:24 13:38:26","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"39.0","aperture":"5.0","speed":"1/160s","iso":"100"},
+            "../../assets/img/favoritas/IMG_7275.avif": {"date":"2019:11:25 13:56:49","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"50.0","aperture":"5.6","speed":"1/4000s","iso":"400"},
+            "../../assets/img/favoritas/IMG_7615.avif": {"date":"2019:11:25 15:07:23","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/800s","iso":"100"},
+            "../../assets/img/favoritas/IMG_7782.avif": {"date":"2019:11:25 15:53:42","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"29.0","aperture":"4.5","speed":"1/2000s","iso":"100"},
+            "../../assets/img/favoritas/IMG_8419.avif": {"date":"2019:12:03 13:15:46","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"45.0","aperture":"5.0","speed":"1/500s","iso":"1600"},
+            "../../assets/img/favoritas/IMG_8928.avif": {"date":"2019:12:05 13:45:51","camera":"Canon EOS 2000D","lens":"EF-S18-55mm f/3.5-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/400s","iso":"800"},
+            "../../assets/img/favoritas/IMG_9227.avif": {"date":"2023:07:24 01:38:24","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/4000s","iso":"800"},
+            "../../assets/img/favoritas/IMG_9228.avif": {"date":"2023:07:24 01:40:49","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/4000s","iso":"800"},
+            "../../assets/img/favoritas/IMG_9230.avif": {"date":"2023:07:24 01:41:02","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/1250s","iso":"800"},
+            "../../assets/img/favoritas/IMG_9393 (1).avif": {"date":"2019:12:07 13:06:06","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"90.0","aperture":"5.6","speed":"1/800s","iso":"100"},
+            "../../assets/img/favoritas/IMG_9411.avif": {"date":"2019:12:07 13:27:48","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"5.6","speed":"1/800s","iso":"100"},
+            "../../assets/img/favoritas/IMG_9476.avif": {"date":"2019:12:07 14:59:18","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"116.0","aperture":"6.3","speed":"1/80s","iso":"3200"},
+            "../../assets/img/favoritas/IMG_9519.avif": {"date":"2023:07:26 09:34:37","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"9.0","speed":"1/400s","iso":"200"},
+            "../../assets/img/favoritas/IMG_9548.avif": {"date":"2019:12:08 15:07:28","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"1600"},
+            "../../assets/img/favoritas/IMG_9611.avif": {"date":"2023:07:26 12:08:47","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"22.0","speed":"1/60s","iso":"200"},
+            "../../assets/img/favoritas/IMG_9623 (1).avif": {"date":"2023:07:26 12:11:38","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"16.0","speed":"1/60s","iso":"200"},
+            "../../assets/img/favoritas/IMG_9724.avif": {"date":"2019:12:09 14:16:13","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"96.0","aperture":"5.0","speed":"1/200s","iso":"100"},
+            "../../assets/img/favoritas/IMG_9981.avif": {"date":"2019:12:09 15:21:17","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"163.0","aperture":"5.6","speed":"1/200s","iso":"200"}
+        };
+    </script>
 
     <script src="../../assets/scripts.js"></script>
 

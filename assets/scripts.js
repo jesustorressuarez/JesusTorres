@@ -44,7 +44,7 @@
                 }
             });
 
-            // Cerrar menu al hacer clic en enlaces
+            // Cerrar menu al hacer clic en enlaces (excepto lang con tooltip visible)
             mobileMenu.querySelectorAll('a').forEach(function (link) {
                 link.addEventListener('click', function () {
                     burger.classList.remove('active');
@@ -52,6 +52,61 @@
                     if (typeof lenis !== 'undefined') { lenis.start(); }
                 });
             });
+
+        }
+
+        /* ── Long-press en selector de idioma (mobile) → tooltip ── */
+        var allLangLinks = document.querySelectorAll('.lang-selector a[href]');
+        var LONG_PRESS_MS = 400;
+        var isTouchDevice = 'ontouchstart' in window;
+
+        if (isTouchDevice && allLangLinks.length) {
+            allLangLinks.forEach(function (link) {
+                var pressTimer = null;
+                var didLongPress = false;
+
+                link.addEventListener('touchstart', function () {
+                    didLongPress = false;
+                    // Ocultar cualquier tooltip abierto
+                    allLangLinks.forEach(function (l) {
+                        var t = l.querySelector('.lang-tooltip');
+                        if (t) t.classList.remove('show');
+                    });
+                    pressTimer = setTimeout(function () {
+                        didLongPress = true;
+                        var tooltip = link.querySelector('.lang-tooltip');
+                        if (tooltip) tooltip.classList.add('show');
+                    }, LONG_PRESS_MS);
+                }, { passive: true });
+
+                link.addEventListener('touchmove', function () {
+                    clearTimeout(pressTimer);
+                }, { passive: true });
+
+                link.addEventListener('touchend', function (e) {
+                    clearTimeout(pressTimer);
+                    if (didLongPress) {
+                        e.preventDefault();
+                    }
+                });
+
+                link.addEventListener('click', function (e) {
+                    if (didLongPress) {
+                        e.preventDefault();
+                        didLongPress = false;
+                    }
+                });
+            });
+
+            // Cerrar tooltips al tocar fuera
+            document.addEventListener('touchstart', function (e) {
+                if (!e.target.closest('.lang-selector')) {
+                    allLangLinks.forEach(function (l) {
+                        var t = l.querySelector('.lang-tooltip');
+                        if (t) t.classList.remove('show');
+                    });
+                }
+            }, { passive: true });
         }
 
         /* ═══════════════════════════════════════════
@@ -245,19 +300,6 @@
             if (!zoomMinimap || !minimapImg) { return; }
             minimapImg.src = src;
             zoomMinimap.classList.add('active');
-            positionMinimap();
-        }
-
-        function positionMinimap() {
-            if (!zoomMinimap || !zoomWrapper || !imgZoom) { return; }
-            var wrapperRect = zoomWrapper.getBoundingClientRect();
-            var imgRect = imgZoom.getBoundingClientRect();
-            // Esquina inferior izquierda de la foto, dentro del wrapper
-            var imgLeft = imgRect.left - wrapperRect.left;
-            var imgBottom = wrapperRect.bottom - imgRect.bottom;
-            var gap = 8;
-            zoomMinimap.style.left = (imgLeft + gap) + 'px';
-            zoomMinimap.style.bottom = (imgBottom + gap) + 'px';
         }
 
         function hideMinimap() {
@@ -340,6 +382,12 @@
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
             if (typeof lenis !== 'undefined') { lenis.stop(); }
+            // Marcar modo galería para ocultar flechas en mobile
+            if (isGalleryCarousel) {
+                modal.classList.add('gallery-mode');
+            } else {
+                modal.classList.remove('gallery-mode');
+            }
             resetZoom();
             updateModalNavButtons();
             updateModalCounter();
@@ -352,6 +400,12 @@
             document.body.style.touchAction = '';
             if (typeof lenis !== 'undefined') { lenis.start(); }
             resetZoom();
+            if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
+            if (metaTechnical) { metaTechnical.classList.remove('open'); }
+            if (metadataToggle) { metadataToggle.classList.remove('open'); }
+            if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
+            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
+            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
         };
 
         // --- Carrusel sin bucle (solo proyectos, no galerías de fotos) ---
@@ -427,8 +481,10 @@
                     imgZoom.classList.add('active-zoom');
                     showMinimap(imgZoom.src);
                     applyPan(e);
+                    if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
                 } else {
                     resetZoom();
+                    if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
                 }
             });
         }
@@ -459,152 +515,533 @@
             }
         });
 
-        /* ── TOUCH: swipe + pinch-to-zoom en modal ── */
+        /* ── TOUCH: swipe + pinch-to-zoom en modal (estilo galería nativa) ── */
         if (modal && imgZoom && zoomWrapper) {
-            var touchStartX = 0;
-            var touchStartY = 0;
-            var touchStartDist = 0;
-            var touchZoomScale = 1;
-            var touchPanX = 0;
-            var touchPanY = 0;
-            var touchLastPanX = 0;
-            var touchLastPanY = 0;
-            var isTouchZoomed = false;
+            var tScale = 1;          // escala actual
+            var tPanX = 0;           // traslación actual X
+            var tPanY = 0;           // traslación actual Y
+            var tIsTouchZoomed = false;
             var SWIPE_THRESHOLD = 50;
+            var MIN_SCALE = 1;
+            var MAX_SCALE = 4;
+            var DOUBLE_TAP_SCALE = 2.5;
+            var RUBBER_BAND = 0.3;   // factor de elasticidad en bordes
 
-            function getTouchDist(touches) {
+            // Estado del gesto
+            var pinchStartDist = 0;
+            var pinchBaseScale = 1;  // escala al inicio del pinch
+            var pinchCenterX = 0;
+            var pinchCenterY = 0;
+            var pinchBasePanX = 0;
+            var pinchBasePanY = 0;
+
+            var panStartX = 0;
+            var panStartY = 0;
+            var panBasePanX = 0;
+            var panBasePanY = 0;
+            var isPanning = false;
+
+            // Inercia
+            var velocityX = 0;
+            var velocityY = 0;
+            var lastMoveTime = 0;
+            var lastMoveX = 0;
+            var lastMoveY = 0;
+            var inertiaRAF = 0;
+
+            function tGetDist(touches) {
                 var dx = touches[0].clientX - touches[1].clientX;
                 var dy = touches[0].clientY - touches[1].clientY;
                 return Math.sqrt(dx * dx + dy * dy);
             }
 
-            function getTouchCenter(touches) {
+            function tGetCenter(touches) {
                 return {
                     x: (touches[0].clientX + touches[1].clientX) / 2,
                     y: (touches[0].clientY + touches[1].clientY) / 2
                 };
             }
 
-            function applyTouchTransform() {
-                imgZoom.style.transition = 'none';
-                imgZoom.style.transform = 'translate(' + touchPanX + 'px, ' + touchPanY + 'px) scale(' + touchZoomScale + ')';
-                if (isTouchZoomed) {
+            /* Calcula los límites de pan para la escala actual */
+            function tGetPanBounds() {
+                var wr = zoomWrapper.getBoundingClientRect();
+                var imgW = imgZoom.naturalWidth;
+                var imgH = imgZoom.naturalHeight;
+                // Tamaño del img element (object-fit: contain)
+                var wrapRatio = wr.width / wr.height;
+                var imgRatio = imgW / imgH;
+                var displayW, displayH;
+                if (imgRatio > wrapRatio) {
+                    displayW = wr.width;
+                    displayH = wr.width / imgRatio;
+                } else {
+                    displayH = wr.height;
+                    displayW = wr.height * imgRatio;
+                }
+                var scaledW = displayW * tScale;
+                var scaledH = displayH * tScale;
+                var maxPanX = Math.max(0, (scaledW - wr.width) / 2);
+                var maxPanY = Math.max(0, (scaledH - wr.height) / 2);
+                return { maxX: maxPanX, maxY: maxPanY };
+            }
+
+            /* Clampa pan a los límites (con o sin rubber-band) */
+            function tClampPan(px, py, rubber) {
+                var b = tGetPanBounds();
+                if (rubber) {
+                    // Efecto elástico: permite pasarse pero con resistencia
+                    if (px > b.maxX) px = b.maxX + (px - b.maxX) * RUBBER_BAND;
+                    else if (px < -b.maxX) px = -b.maxX + (px + b.maxX) * RUBBER_BAND;
+                    if (py > b.maxY) py = b.maxY + (py - b.maxY) * RUBBER_BAND;
+                    else if (py < -b.maxY) py = -b.maxY + (py + b.maxY) * RUBBER_BAND;
+                } else {
+                    px = Math.max(-b.maxX, Math.min(b.maxX, px));
+                    py = Math.max(-b.maxY, Math.min(b.maxY, py));
+                }
+                return { x: px, y: py };
+            }
+
+            function tApply(useTransition) {
+                if (useTransition) {
+                    imgZoom.style.transition = 'transform 0.3s cubic-bezier(.2,.85,.4,1)';
+                } else {
+                    imgZoom.style.transition = 'none';
+                }
+                imgZoom.style.transform = 'translate(' + tPanX + 'px,' + tPanY + 'px) scale(' + tScale + ')';
+                if (tIsTouchZoomed) {
                     showMinimap(imgZoom.src);
-                    updateMinimapViewport(touchPanX, touchPanY);
+                    updateMinimapViewport(tPanX, tPanY);
                 }
             }
 
-            function resetTouchZoom() {
-                touchZoomScale = 1;
-                touchPanX = 0;
-                touchPanY = 0;
-                touchLastPanX = 0;
-                touchLastPanY = 0;
-                isTouchZoomed = false;
-                imgZoom.style.transition = 'transform 0.3s ease';
+            function tResetZoom(animate) {
+                cancelAnimationFrame(inertiaRAF);
+                tScale = 1;
+                tPanX = 0;
+                tPanY = 0;
+                tIsTouchZoomed = false;
+                velocityX = 0;
+                velocityY = 0;
+                if (animate) {
+                    imgZoom.style.transition = 'transform 0.3s cubic-bezier(.2,.85,.4,1)';
+                } else {
+                    imgZoom.style.transition = 'none';
+                }
                 imgZoom.style.transform = '';
                 imgZoom.classList.remove('active-zoom');
                 isZoomed = false;
                 hideMinimap();
+                if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
             }
 
+            /* Snap-back: anima pan a los límites correctos */
+            function tSnapBack() {
+                var clamped = tClampPan(tPanX, tPanY, false);
+                if (Math.abs(clamped.x - tPanX) > 0.5 || Math.abs(clamped.y - tPanY) > 0.5) {
+                    tPanX = clamped.x;
+                    tPanY = clamped.y;
+                    tApply(true);
+                }
+            }
+
+            /* Inercia tras soltar el dedo */
+            function tStartInertia() {
+                cancelAnimationFrame(inertiaRAF);
+                var friction = 0.92;
+                function step() {
+                    if (Math.abs(velocityX) < 0.5 && Math.abs(velocityY) < 0.5) {
+                        tSnapBack();
+                        return;
+                    }
+                    velocityX *= friction;
+                    velocityY *= friction;
+                    var newX = tPanX + velocityX;
+                    var newY = tPanY + velocityY;
+                    // Aplicar rubber-band durante inercia
+                    var b = tGetPanBounds();
+                    if (newX > b.maxX || newX < -b.maxX) { velocityX *= 0.4; }
+                    if (newY > b.maxY || newY < -b.maxY) { velocityY *= 0.4; }
+                    var clamped = tClampPan(newX, newY, true);
+                    tPanX = clamped.x;
+                    tPanY = clamped.y;
+                    tApply(false);
+                    inertiaRAF = requestAnimationFrame(step);
+                }
+                inertiaRAF = requestAnimationFrame(step);
+            }
+
+            /* Zoom al punto concreto (para pinch y double-tap) */
+            function tZoomToPoint(newScale, pointX, pointY, animate) {
+                var wr = zoomWrapper.getBoundingClientRect();
+                // Punto en coords del wrapper (relativo al centro)
+                var cx = pointX - wr.left - wr.width / 2;
+                var cy = pointY - wr.top - wr.height / 2;
+                // Ajustar pan para mantener el punto fijo
+                var ratio = newScale / tScale;
+                var newPanX = cx - ratio * (cx - tPanX);
+                var newPanY = cy - ratio * (cy - tPanY);
+                tScale = newScale;
+                var clamped = tClampPan(newPanX, newPanY, false);
+                tPanX = clamped.x;
+                tPanY = clamped.y;
+                tIsTouchZoomed = tScale > 1.01;
+                if (tIsTouchZoomed) {
+                    imgZoom.classList.add('active-zoom');
+                    isZoomed = true;
+                    if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
+                }
+                tApply(animate);
+            }
+
+            /* ── TOUCHSTART ── */
             zoomWrapper.addEventListener('touchstart', function (e) {
+                cancelAnimationFrame(inertiaRAF);
+                velocityX = 0;
+                velocityY = 0;
+
                 if (e.touches.length === 2) {
-                    // Pinch start
                     e.preventDefault();
-                    touchStartDist = getTouchDist(e.touches);
+                    isPanning = false;
+                    pinchStartDist = tGetDist(e.touches);
+                    pinchBaseScale = tScale;
+                    var center = tGetCenter(e.touches);
+                    pinchCenterX = center.x;
+                    pinchCenterY = center.y;
+                    pinchBasePanX = tPanX;
+                    pinchBasePanY = tPanY;
                 } else if (e.touches.length === 1) {
-                    touchStartX = e.touches[0].clientX;
-                    touchStartY = e.touches[0].clientY;
-                    touchLastPanX = touchPanX;
-                    touchLastPanY = touchPanY;
+                    panStartX = e.touches[0].clientX;
+                    panStartY = e.touches[0].clientY;
+                    panBasePanX = tPanX;
+                    panBasePanY = tPanY;
+                    isPanning = false;
+                    lastMoveX = panStartX;
+                    lastMoveY = panStartY;
+                    lastMoveTime = Date.now();
                 }
             }, { passive: false });
 
+            /* ── TOUCHMOVE ── */
             zoomWrapper.addEventListener('touchmove', function (e) {
-                if (e.touches.length === 2 && touchStartDist > 0) {
-                    // Pinch zoom
+                if (e.touches.length === 2 && pinchStartDist > 0) {
+                    /* — Pinch zoom — */
                     e.preventDefault();
-                    var newDist = getTouchDist(e.touches);
-                    var scale = newDist / touchStartDist;
-                    touchZoomScale = Math.max(1, Math.min(4, scale * (isTouchZoomed ? touchZoomScale : 1)));
-                    if (touchZoomScale > 1) {
-                        isTouchZoomed = true;
+                    var newDist = tGetDist(e.touches);
+                    var ratio = newDist / pinchStartDist;
+                    var newScale = Math.max(MIN_SCALE * 0.5, Math.min(MAX_SCALE, pinchBaseScale * ratio));
+
+                    // Zoom centrado en el punto medio del pinch
+                    var center = tGetCenter(e.touches);
+                    var wr = zoomWrapper.getBoundingClientRect();
+                    var cx = center.x - wr.left - wr.width / 2;
+                    var cy = center.y - wr.top - wr.height / 2;
+                    var scaleRatio = newScale / pinchBaseScale;
+                    var pCx = pinchCenterX - wr.left - wr.width / 2;
+                    var pCy = pinchCenterY - wr.top - wr.height / 2;
+                    tPanX = cx - scaleRatio * (pCx - pinchBasePanX);
+                    tPanY = cy - scaleRatio * (pCy - pinchBasePanY);
+                    tScale = newScale;
+
+                    tIsTouchZoomed = tScale > 1.01;
+                    if (tIsTouchZoomed) {
                         imgZoom.classList.add('active-zoom');
                         isZoomed = true;
+                        if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
                     }
-                    applyTouchTransform();
-                } else if (e.touches.length === 1 && isTouchZoomed) {
-                    // Pan cuando está con zoom
+                    tApply(false);
+
+                } else if (e.touches.length === 1 && tIsTouchZoomed) {
+                    /* — Pan con un dedo (solo con zoom) — */
                     e.preventDefault();
-                    var dx = e.touches[0].clientX - touchStartX;
-                    var dy = e.touches[0].clientY - touchStartY;
-                    touchPanX = touchLastPanX + dx;
-                    touchPanY = touchLastPanY + dy;
-                    applyTouchTransform();
+                    isPanning = true;
+                    var dx = e.touches[0].clientX - panStartX;
+                    var dy = e.touches[0].clientY - panStartY;
+                    var newPanX = panBasePanX + dx;
+                    var newPanY = panBasePanY + dy;
+                    // Rubber-band en los bordes
+                    var clamped = tClampPan(newPanX, newPanY, true);
+                    tPanX = clamped.x;
+                    tPanY = clamped.y;
+                    tApply(false);
+
+                    // Tracking de velocidad para inercia
+                    var now = Date.now();
+                    var dt = now - lastMoveTime;
+                    if (dt > 0) {
+                        velocityX = (e.touches[0].clientX - lastMoveX) * (16 / dt);
+                        velocityY = (e.touches[0].clientY - lastMoveY) * (16 / dt);
+                    }
+                    lastMoveX = e.touches[0].clientX;
+                    lastMoveY = e.touches[0].clientY;
+                    lastMoveTime = now;
                 }
             }, { passive: false });
 
+            /* ── TOUCHEND ── */
             zoomWrapper.addEventListener('touchend', function (e) {
                 if (e.touches.length === 0) {
-                    touchStartDist = 0;
+                    pinchStartDist = 0;
 
-                    // Si está con zoom y se reduce a ~1, resetear
-                    if (isTouchZoomed && touchZoomScale <= 1.05) {
-                        resetTouchZoom();
+                    // Si se redujo por debajo de 1 → snap back a escala 1
+                    if (tScale < 1.01) {
+                        tResetZoom(true);
                         return;
                     }
 
+                    // Si estaba haciendo pan con inercia
+                    if (isPanning && tIsTouchZoomed) {
+                        isPanning = false;
+                        tStartInertia();
+                        return;
+                    }
+
+                    // Snap-back después de pinch
+                    if (tIsTouchZoomed) {
+                        tSnapBack();
+                    }
+
                     // Swipe solo si NO está con zoom
-                    if (!isTouchZoomed) {
+                    if (!tIsTouchZoomed) {
                         var endX = e.changedTouches[0].clientX;
                         var endY = e.changedTouches[0].clientY;
-                        var diffX = endX - touchStartX;
-                        var diffY = endY - touchStartY;
-
-                        // Solo swipe horizontal si el movimiento es más horizontal que vertical
+                        var diffX = endX - panStartX;
+                        var diffY = endY - panStartY;
                         if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
                             if (diffX > 0) {
-                                window.changeModalImage(-1); // swipe derecha → imagen anterior
+                                window.changeModalImage(-1);
                             } else {
-                                window.changeModalImage(1);  // swipe izquierda → imagen siguiente
+                                window.changeModalImage(1);
                             }
                         }
                     }
                 }
+
+                // Si quedan 1 dedo después de soltar uno (transición pinch → pan)
+                if (e.touches.length === 1) {
+                    panStartX = e.touches[0].clientX;
+                    panStartY = e.touches[0].clientY;
+                    panBasePanX = tPanX;
+                    panBasePanY = tPanY;
+                    pinchStartDist = 0;
+                    lastMoveX = panStartX;
+                    lastMoveY = panStartY;
+                    lastMoveTime = Date.now();
+                    velocityX = 0;
+                    velocityY = 0;
+                }
             });
 
-            // Doble-tap para zoom/unzoom
+            /* ── DOBLE-TAP: zoom al punto tocado / unzoom ── */
             var lastTap = 0;
+            var lastTapX = 0;
+            var lastTapY = 0;
             zoomWrapper.addEventListener('touchend', function (e) {
                 if (e.touches.length > 0) { return; }
                 var now = Date.now();
-                if (now - lastTap < 300) {
-                    // Doble tap
+                var tx = e.changedTouches[0].clientX;
+                var ty = e.changedTouches[0].clientY;
+                if (now - lastTap < 300 && Math.abs(tx - lastTapX) < 30 && Math.abs(ty - lastTapY) < 30) {
                     e.preventDefault();
-                    if (isTouchZoomed) {
-                        resetTouchZoom();
+                    if (tIsTouchZoomed) {
+                        tResetZoom(true);
                     } else {
-                        touchZoomScale = ZOOM_SCALE;
-                        isTouchZoomed = true;
-                        imgZoom.classList.add('active-zoom');
-                        isZoomed = true;
-                        applyTouchTransform();
+                        tZoomToPoint(DOUBLE_TAP_SCALE, tx, ty, true);
                     }
                     lastTap = 0;
                 } else {
                     lastTap = now;
+                    lastTapX = tx;
+                    lastTapY = ty;
                 }
             });
 
             // Resetear zoom al cambiar de imagen
             var origChangeModal = window.changeModalImage;
             window.changeModalImage = function (dir, event) {
-                resetTouchZoom();
+                tResetZoom(false);
                 origChangeModal(dir, event);
                 updateModalNavButtons();
             };
         }
+
+        /* ═══════════════════════════════════════════
+           4.5 METADATA PANEL
+        ═══════════════════════════════════════════ */
+
+        var metadataPanel = document.getElementById('metadataPanel');
+        var metadataToggle = document.getElementById('metadataToggle');
+        var metadataToggleFloating = document.getElementById('metadataToggleFloating');
+        var metaTechnical = document.getElementById('metaTechnical');
+        var modalContentWrapper = document.getElementById('modalContentWrapper');
+
+        function formatDate(dateStr) {
+            if (!dateStr || dateStr.indexOf(':') === -1) { return dateStr; }
+            var parts = dateStr.split(' ')[0].split(':');
+            if (parts.length < 3) { return dateStr; }
+            var year = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10) - 1;
+            var day = parseInt(parts[2], 10);
+            var date = new Date(year, month, day);
+            var options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('es-ES', options);
+        }
+
+        function updateMetadataPanel() {
+            if (!metadataPanel || !window.photoMetadata) { return; }
+
+            var currentSrc = imgZoom ? imgZoom.src : '';
+            if (!currentSrc) {
+                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
+                return;
+            }
+
+            // Las claves son rutas relativas, imgZoom.src es URL absoluta
+            var metadata = null;
+            var metaKeys = Object.keys(window.photoMetadata);
+            for (var k = 0; k < metaKeys.length; k++) {
+                var normalizedKey = metaKeys[k].replace(/^\.\.\/\.\.\//,'');
+                if (currentSrc.indexOf(normalizedKey) !== -1) {
+                    metadata = window.photoMetadata[metaKeys[k]];
+                    break;
+                }
+            }
+
+            // Si no hay metadata, ocultar todo
+            if (!metadata) {
+                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
+                return;
+            }
+
+            // Determinar si hay título/descripción
+            var hasTitle = metadata.title && metadata.title.trim() !== '';
+            var hasDescription = metadata.description && metadata.description.trim() !== '';
+            var hasLocation = metadata.location && metadata.location.trim() !== '';
+            var hasTechData = !!(metadata.camera || metadata.lens || metadata.focal || metadata.aperture || metadata.speed || metadata.iso);
+
+            // Si no hay nada, ocultar todo
+            if (!hasTitle && !hasDescription && !hasLocation && !hasTechData) {
+                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
+                return;
+            }
+
+            // Mostrar panel
+            if (metadataPanel) { metadataPanel.classList.remove('hidden'); }
+
+            // Actualizar información
+            var metaTitle = document.getElementById('metaTitle');
+            var metaDateLocation = document.getElementById('metaDateLocation');
+            var metaDescription = document.getElementById('metaDescription');
+
+            if (metaTitle) {
+                metaTitle.textContent = hasTitle ? metadata.title : '';
+            }
+
+            var dateStr = metadata.date ? formatDate(metadata.date) : '';
+            var dateLocText = [];
+            if (dateStr) { dateLocText.push(dateStr); }
+            if (hasLocation) { dateLocText.push(metadata.location); }
+            if (metaDateLocation) {
+                metaDateLocation.textContent = dateLocText.join(' | ');
+            }
+
+            if (metaDescription) {
+                metaDescription.textContent = hasDescription ? metadata.description : '';
+                metaDescription.style.display = hasDescription ? '' : 'none';
+            }
+
+            // Actualizar datos técnicos
+            var metaCamera = document.getElementById('metaCamera');
+            var metaLens = document.getElementById('metaLens');
+            var metaFocalAperture = document.getElementById('metaFocalAperture');
+            var metaSpeedIso = document.getElementById('metaSpeedIso');
+
+            if (metaCamera) { metaCamera.textContent = metadata.camera || '-'; }
+            if (metaLens) { metaLens.textContent = metadata.lens || '-'; }
+
+            var focalApertureText = [];
+            if (metadata.focal) { focalApertureText.push(metadata.focal + 'mm'); }
+            if (metadata.aperture) { focalApertureText.push('f/' + metadata.aperture); }
+            if (metaFocalAperture) { metaFocalAperture.textContent = focalApertureText.length > 0 ? focalApertureText.join(' · ') : '-'; }
+
+            var speedIsoText = [];
+            if (metadata.speed) { speedIsoText.push(metadata.speed); }
+            if (metadata.iso) { speedIsoText.push('ISO ' + metadata.iso); }
+            if (metaSpeedIso) { metaSpeedIso.textContent = speedIsoText.length > 0 ? speedIsoText.join(' · ') : '-'; }
+
+            // Resetear estado de toggle al cambiar de foto
+            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
+            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
+            if (metadataToggle) { metadataToggle.classList.remove('open'); }
+            if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
+            if (metaTechnical) { metaTechnical.classList.remove('open'); }
+
+            // VARIANTE 1: Sin título pero con datos técnicos
+            if (!hasTitle && !hasDescription && !hasLocation && hasTechData) {
+                metadataPanel.classList.add('no-title');
+                metadataPanel.classList.remove('open');
+                if (metadataToggle) { metadataToggle.classList.add('hidden'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.remove('hidden'); }
+            }
+            // VARIANTE 2: Con título/descripción/ubicación
+            else {
+                metadataPanel.classList.remove('no-title');
+                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
+                // Si no hay datos técnicos, ocultar el toggle "Ver más"
+                if (metadataToggle) {
+                    if (hasTechData) {
+                        metadataToggle.classList.remove('hidden');
+                    } else {
+                        metadataToggle.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        window.toggleMetadata = function (event) {
+            if (event) { event.stopPropagation(); }
+            if (!metaTechnical) { return; }
+
+            var isOpen = metaTechnical.classList.contains('open');
+            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
+            if (isOpen) {
+                metaTechnical.classList.remove('open');
+                if (metadataToggle) { metadataToggle.classList.remove('open'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
+                if (metadataPanel && metadataPanel.classList.contains('no-title')) {
+                    metadataPanel.classList.remove('open');
+                }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
+            } else {
+                metaTechnical.classList.add('open');
+                if (metadataToggle) { metadataToggle.classList.add('open'); }
+                if (metadataToggleFloating) { metadataToggleFloating.classList.add('open'); }
+                if (metadataPanel && metadataPanel.classList.contains('no-title')) {
+                    metadataPanel.classList.add('open');
+                }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver menos'; }
+            }
+        };
+
+        // Integrar con openZoom
+        var origOpenZoom = window.openZoom;
+        window.openZoom = function (src) {
+            origOpenZoom(src);
+            updateMetadataPanel();
+        };
+
+        // Integrar con changeModalImage
+        var origChangeModalImage = window.changeModalImage;
+        window.changeModalImage = function (dir, event) {
+            origChangeModalImage(dir, event);
+            updateMetadataPanel();
+        };
+
+        // Nota: la integración zoom ↔ metadata se hace en el click handler
+        // existente de imgZoom (sección 4. ZOOM MODAL) que ya añade/quita
+        // la clase .zoomed en modalContentWrapper.
 
         /* ═══════════════════════════════════════════
            5. SCROLL TO TOP

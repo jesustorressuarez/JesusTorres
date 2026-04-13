@@ -118,7 +118,15 @@
   border-radius: 2px;
 }
 
-.lang-selector a:hover .lang-tooltip {
+@media (hover: hover) {
+  .lang-selector a:hover .lang-tooltip {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Long-press tooltip en mobile */
+.lang-tooltip.show {
   opacity: 1;
   pointer-events: auto;
 }
@@ -221,6 +229,23 @@
     padding: 16px 0 0 0;
     text-align: center;
     border-top: 1px solid var(--General-200);
+  }
+
+  .lang-selector a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .lang-selector--mobile a {
+    position: relative;
+  }
+
+  .lang-selector--mobile .lang-tooltip {
+    top: auto;
+    bottom: calc(100% + 10px);
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: opacity 0.2s ease;
   }
 
   .nav--desktop,
