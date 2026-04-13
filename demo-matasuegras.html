@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo — Sonidos Matasuegras</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f2f2f2;
+            color: #262626;
+            min-height: 100vh;
+            padding: 64px 24px 80px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            margin-bottom: 10px;
+        }
+        .page-header p {
+            font-size: 0.9rem;
+            color: #5B5A5A;
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 680px) {
+            .cards { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1.5px solid #dadada;
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .card.playing {
+            border-color: #262626;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+
+        .card-number {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #8D8D8D;
+            text-transform: uppercase;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .card-desc {
+            font-size: 0.82rem;
+            color: #5B5A5A;
+            line-height: 1.6;
+            flex: 1;
+        }
+
+        .waveform {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 0 2px;
+        }
+        .waveform-bar {
+            flex: 1;
+            background: #dadada;
+            border-radius: 2px;
+            height: 8px;
+            transition: height 0.05s ease, background 0.2s;
+        }
+        .playing .waveform-bar {
+            background: #262626;
+            animation: wavePulse 0.15s ease-in-out infinite alternate;
+        }
+        .playing .waveform-bar:nth-child(2n)   { animation-delay: 0.03s; }
+        .playing .waveform-bar:nth-child(3n)   { animation-delay: 0.06s; }
+        .playing .waveform-bar:nth-child(4n)   { animation-delay: 0.09s; }
+        .playing .waveform-bar:nth-child(5n)   { animation-delay: 0.12s; }
+
+        @keyframes wavePulse {
+            from { height: 4px;  }
+            to   { height: 28px; }
+        }
+
+        .play-btn {
+            width: 100%;
+            padding: 14px;
+            background: #262626;
+            color: #f2f2f2;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            letter-spacing: 0.3px;
+        }
+        .play-btn:hover  { background: #1a1a1a; }
+        .play-btn:active { transform: scale(0.97); }
+        .play-btn.active { background: #5B5A5A; cursor: default; }
+
+        .note {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: #8D8D8D;
+        }
+    </style>
+</head>
+<body>
+
+<header class="page-header">
+    <h1>Elige el sonido del matasuegras</h1>
+    <p>Tres variantes generadas con Web Audio API. Haz clic en cada una para escucharla y elige la que más te guste.</p>
+</header>
+
+<div class="cards">
+
+    <!-- ── OPCIÓN 1 ── -->
+    <div class="card" id="card1">
+        <span class="card-number">Opción 01</span>
+        <span class="card-title">Trompa Cálida</span>
+        <p class="card-desc">Tono sawtooth con pitch ascendente y filtro bandpass. Sonido cálido y redondo, como una trompeta de cartón.</p>
+        <div class="waveform" id="wv1">
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+        </div>
+        <button class="play-btn" id="btn1" onclick="play(1)">▶ Escuchar</button>
+    </div>
+
+    <!-- ── OPCIÓN 2 ── -->
+    <div class="card" id="card2">
+        <span class="card-number">Opción 02</span>
+        <span class="card-title">Flutter Festivo</span>
+        <p class="card-desc">Onda cuadrada con modulación de amplitud a 22 Hz. Simula el aleteo de la lengüeta del matasuegras real.</p>
+        <div class="waveform" id="wv2">
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+        </div>
+        <button class="play-btn" id="btn2" onclick="play(2)">▶ Escuchar</button>
+    </div>
+
+    <!-- ── OPCIÓN 3 ── -->
+    <div class="card" id="card3">
+        <span class="card-number">Opción 03</span>
+        <span class="card-title">Pitido Alegre</span>
+        <p class="card-desc">Dos osciladores sawtooth ligeramente desafinados + ráfaga de ruido en el ataque. Más agudo y estridente.</p>
+        <div class="waveform" id="wv3">
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+            <div class="waveform-bar"></div><div class="waveform-bar"></div>
+        </div>
+        <button class="play-btn" id="btn3" onclick="play(3)">▶ Escuchar</button>
+    </div>
+
+</div>
+
+<p class="note">Los sonidos duran ~1 segundo · Generados con Web Audio API · Sin dependencias externas</p>
+
+<script>
+(function () {
+
+    var activeCard = null;
+    var activeTimeout = null;
+
+    /* ── Síntesis ── */
+
+    function horn1(ctx) {
+        var T = ctx.currentTime;
+        var osc    = ctx.createOscillator();
+        var filter = ctx.createBiquadFilter();
+        var env    = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, T);
+        osc.frequency.linearRampToValueAtTime(430, T + 0.85);
+
+        filter.type      = 'bandpass';
+        filter.frequency.value = 750;
+        filter.Q.value   = 2.5;
+
+        env.gain.setValueAtTime(0.001, T);
+        env.gain.exponentialRampToValueAtTime(0.55, T + 0.018);
+        env.gain.setValueAtTime(0.55, T + 0.72);
+        env.gain.exponentialRampToValueAtTime(0.001, T + 1.0);
+
+        osc.connect(filter);
+        filter.connect(env);
+        env.connect(ctx.destination);
+
+        osc.start(T);
+        osc.stop(T + 1.05);
+    }
+
+    function horn2(ctx) {
+        var T = ctx.currentTime;
+        var osc     = ctx.createOscillator();
+        var filter  = ctx.createBiquadFilter();
+        var envGain = ctx.createGain();
+        var amGain  = ctx.createGain();
+        var lfo     = ctx.createOscillator();
+        var lfoGain = ctx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.value = 340;
+
+        filter.type          = 'lowpass';
+        filter.frequency.value = 2400;
+
+        /* Envelope sobre envGain */
+        envGain.gain.setValueAtTime(0.001, T);
+        envGain.gain.exponentialRampToValueAtTime(0.42, T + 0.015);
+        envGain.gain.setValueAtTime(0.42, T + 0.72);
+        envGain.gain.exponentialRampToValueAtTime(0.001, T + 0.96);
+
+        /* AM: amGain.gain = 1.0 + 0.42·sin(22 Hz) → oscila entre 0.58 y 1.42 */
+        amGain.gain.setValueAtTime(1.0, T);
+        lfo.type = 'sine';
+        lfo.frequency.value = 22;
+        lfoGain.gain.value = 0.42;
+        lfo.connect(lfoGain);
+        lfoGain.connect(amGain.gain);
+
+        osc.connect(filter);
+        filter.connect(envGain);
+        envGain.connect(amGain);
+        amGain.connect(ctx.destination);
+
+        osc.start(T);
+        lfo.start(T);
+        osc.stop(T + 1.05);
+        lfo.stop(T + 1.05);
+    }
+
+    function horn3(ctx) {
+        var T = ctx.currentTime;
+
+        /* Dos sawtooth ligeramente desafinados */
+        var osc1 = ctx.createOscillator();
+        var osc2 = ctx.createOscillator();
+
+        osc1.type = 'sawtooth';
+        osc2.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(495, T);
+        osc1.frequency.linearRampToValueAtTime(640, T + 0.22);
+        osc1.frequency.linearRampToValueAtTime(510, T + 0.95);
+        osc2.frequency.setValueAtTime(502, T);
+        osc2.frequency.linearRampToValueAtTime(648, T + 0.22);
+        osc2.frequency.linearRampToValueAtTime(518, T + 0.95);
+
+        /* Ráfaga de ruido para el ataque */
+        var noiseDur    = Math.floor(ctx.sampleRate * 0.06);
+        var noiseBuffer = ctx.createBuffer(1, noiseDur, ctx.sampleRate);
+        var nd          = noiseBuffer.getChannelData(0);
+        for (var i = 0; i < noiseDur; i++) nd[i] = Math.random() * 2 - 1;
+        var noiseNode = ctx.createBufferSource();
+        noiseNode.buffer = noiseBuffer;
+
+        var oscMix    = ctx.createGain();
+        var noiseFilt = ctx.createBiquadFilter();
+        var noiseEnv  = ctx.createGain();
+        var filter    = ctx.createBiquadFilter();
+        var env       = ctx.createGain();
+
+        oscMix.gain.value = 0.25;
+
+        noiseFilt.type          = 'bandpass';
+        noiseFilt.frequency.value = 1600;
+        noiseFilt.Q.value       = 1.2;
+
+        noiseEnv.gain.setValueAtTime(0.45, T);
+        noiseEnv.gain.exponentialRampToValueAtTime(0.001, T + 0.07);
+
+        filter.type          = 'bandpass';
+        filter.frequency.value = 1100;
+        filter.Q.value       = 1.8;
+
+        env.gain.setValueAtTime(0.001, T);
+        env.gain.exponentialRampToValueAtTime(0.52, T + 0.016);
+        env.gain.setValueAtTime(0.52, T + 0.65);
+        env.gain.exponentialRampToValueAtTime(0.001, T + 1.0);
+
+        osc1.connect(oscMix);
+        osc2.connect(oscMix);
+        oscMix.connect(filter);
+        filter.connect(env);
+
+        noiseNode.connect(noiseFilt);
+        noiseFilt.connect(noiseEnv);
+        noiseEnv.connect(env);
+
+        env.connect(ctx.destination);
+
+        osc1.start(T); osc2.start(T); noiseNode.start(T);
+        osc1.stop(T + 1.05); osc2.stop(T + 1.05);
+    }
+
+    /* ── UI ── */
+
+    var synths = { 1: horn1, 2: horn2, 3: horn3 };
+
+    window.play = function (n) {
+        /* Cancelar animación anterior */
+        if (activeCard) {
+            document.getElementById('card' + activeCard).classList.remove('playing');
+            document.getElementById('btn'  + activeCard).textContent = '▶ Escuchar';
+            document.getElementById('btn'  + activeCard).classList.remove('active');
+        }
+        clearTimeout(activeTimeout);
+
+        activeCard = n;
+        var card = document.getElementById('card' + n);
+        var btn  = document.getElementById('btn'  + n);
+
+        card.classList.add('playing');
+        btn.textContent = '♪ Sonando…';
+        btn.classList.add('active');
+
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx.resume().then(function () {
+            synths[n](ctx);
+        });
+
+        activeTimeout = setTimeout(function () {
+            card.classList.remove('playing');
+            btn.textContent = '▶ Escuchar';
+            btn.classList.remove('active');
+            activeCard = null;
+            setTimeout(function () { ctx.close(); }, 200);
+        }, 1050);
+    };
+
+})();
+</script>
+
+</body>
+</html>

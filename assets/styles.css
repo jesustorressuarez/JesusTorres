@@ -9,6 +9,7 @@
 }
 
 html, body {
+    scrollbar-gutter: stable;
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -1159,6 +1160,96 @@ input[type="tel"] {
     color: var(--color-error);
 }
 
+/* ── Phone group: placeholder + selector + input ── */
+
+.phone-group {
+    position: relative;
+}
+
+.phone-placeholder {
+    padding: var(--gap-S) 0;
+    border-bottom: 1px solid var(--General-300);
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.phone-placeholder-text {
+    color: var(--General-300);
+    font-size: 1.000rem;
+    font-weight: var(--text-regular);
+}
+
+.phone-placeholder:hover {
+    border-bottom-color: var(--General-400);
+}
+
+.phone-active {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.phone-code-wrapper {
+    flex-shrink: 0;
+    width: 110px;
+    padding-bottom: 1px;
+}
+
+.phone-code-select {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.889rem;
+    color: var(--General-400);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--General-300);
+    padding: var(--gap-S) 0;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235B5A5A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    padding-right: 20px;
+    transition: border-color 0.3s ease;
+}
+
+.phone-code-select:focus {
+    border-bottom-color: var(--General-400);
+}
+
+.phone-number-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.phone-number-wrapper input[type="tel"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.phone-number-wrapper input[type="tel"]:not(:disabled) {
+    opacity: 1;
+}
+
+.phone-group.error .phone-code-select {
+    border-bottom-color: var(--color-error);
+}
+
+.phone-group.error .phone-number-wrapper input {
+    border-bottom-color: var(--color-error);
+}
+
+.phone-group.error .phone-number-wrapper label {
+    color: var(--color-error);
+}
+
+.phone-group.error .phone-number-wrapper .bar:before {
+    background: var(--color-error);
+    width: 100%;
+}
+
 /* Email copiable */
 
 #emailCopiar {
@@ -1278,6 +1369,11 @@ input[type="tel"] {
 ═══════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+
+    /* Zoom minimap */
+    .zoom-minimap.active {
+        display: none;
+    }
 
     /* Layout */
     .grid-12 {

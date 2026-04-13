@@ -169,9 +169,9 @@
                             cursorEl.style.animation = '';
                         }
 
-                        /* Borrado parcial → transición inmediata (0ms);
+                        /* Borrado parcial → pausa breve (como si "pensara" qué escribir);
                            borrado total   → pausa normal (pauseEmpty) */
-                        setTimeout(typewriterStep, eraseStop === 0 ? pauseEmpty : 0);
+                        setTimeout(typewriterStep, eraseStop === 0 ? pauseEmpty : pauseEmpty);
                     } else {
                         setTimeout(typewriterStep, deleteSpeed);
                     }
@@ -604,68 +604,8 @@
             var requiredInputs = form.querySelectorAll('[required]');
             var telefono = document.getElementById('telefono');
 
-            form.addEventListener('submit', function (e) {
-                var isValid = true;
-
-                // Validar campos obligatorios
-                requiredInputs.forEach(function (input) {
-                    var group = input.closest('.input-group');
-                    var isEmailInvalid = input.type === 'email' && !validateEmail(input.value);
-                    var isEmpty = input.value.trim() === '';
-
-                    if (isEmpty || isEmailInvalid) {
-                        e.preventDefault();
-                        group.classList.add('error');
-                        isValid = false;
-                    } else {
-                        group.classList.remove('error');
-                    }
-                });
-
-                // Validar teléfono: si se rellena, debe incluir prefijo y tener 9 cifras
-                if (telefono) {
-                    var phoneGroup = telefono.closest('.input-group');
-                    var phoneError = document.getElementById('phoneError');
-                    var phoneVal = telefono.value.trim();
-
-                    if (phoneVal !== '') {
-                        // Extraer solo dígitos (sin el +)
-                        var digits = phoneVal.replace(/[^0-9]/g, '');
-                        // Separar prefijo y número: el prefijo son los dígitos antes del primer espacio/guión tras el +
-                        var match = phoneVal.match(/^\+(\d{1,4})[\s\-]?(.*)$/);
-
-                        if (!phoneVal.startsWith('+')) {
-                            phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
-                            e.preventDefault();
-                            phoneGroup.classList.add('error');
-                            isValid = false;
-                        } else if (match) {
-                            var prefixDigits = match[1].length;
-                            var numberDigits = match[2].replace(/[^0-9]/g, '').length;
-                            if (numberDigits !== 9) {
-                                phoneError.textContent = 'El número debe tener 9 cifras';
-                                e.preventDefault();
-                                phoneGroup.classList.add('error');
-                                isValid = false;
-                            } else {
-                                phoneGroup.classList.remove('error');
-                            }
-                        } else {
-                            phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
-                            e.preventDefault();
-                            phoneGroup.classList.add('error');
-                            isValid = false;
-                        }
-                    } else {
-                        phoneGroup.classList.remove('error');
-                    }
-                }
-
-                // Sincronizar _replyto antes de enviar
-                if (replytoInput && emailInput) {
-                    replytoInput.value = emailInput.value;
-                }
-            });
+            // La validación y envío se gestiona en el script inline de contact.html.
+            // Aquí solo se limpia el estado de error en tiempo real al corregir.
 
             // Limpiar estado de error al corregir
             requiredInputs.forEach(function (input) {
@@ -679,8 +619,8 @@
             // Limpiar error del teléfono al escribir
             if (telefono) {
                 telefono.addEventListener('input', function () {
-                    var phoneVal = telefono.value.trim();
-                    if (phoneVal === '' || phoneVal.startsWith('+')) {
+                    var digits = telefono.value.replace(/[^0-9]/g, '');
+                    if (telefono.value.trim() === '' || digits.length >= 9) {
                         telefono.closest('.input-group').classList.remove('error');
                     }
                 });
@@ -709,10 +649,12 @@
             navigator.clipboard.writeText(textoOriginal).then(function () {
                 emailElemento.textContent = '¡Copiado!';
                 emailElemento.style.color = '#28a745';
+                emailElemento.style.cursor = 'default';
 
                 setTimeout(function () {
                     emailElemento.textContent = textoOriginal;
                     emailElemento.style.color = '';
+                    emailElemento.style.cursor = '';
                     delete emailElemento.dataset.copying;
                 }, 3000);
             }).catch(function () {

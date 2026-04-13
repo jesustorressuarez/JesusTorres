@@ -126,13 +126,14 @@ html, body{
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
-  background: none;
+  background: var(--General-100);
   color: var(--General-200);
   font-size: 0.722rem;
   font-weight: var(--text-regular);
   letter-spacing: -0.72px;
   white-space: nowrap;
-  padding: 6px 0;
+  padding: 6px 10px;
+  border-radius: 0;
   opacity: 0;
   pointer-events: none;
   z-index: 100;
@@ -234,20 +235,6 @@ html, body{
   text-decoration: none;
 }
 
-.mobile-nav ul ul {
-  margin-top: 8px;
-}
-
-.mobile-nav ul ul li {
-  margin-bottom: 4px;
-}
-
-.mobile-nav ul ul li a {
-  font-size: 1.000rem;
-  font-weight: var(--text-regular);
-  color: var(--General-300);
-  letter-spacing: -0.72px;
-}
 
 /* =========================
    RESPONSIVE

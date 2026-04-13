@@ -3,8 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jesus Torres | Contacto</title>
-    <meta name="description" content="Contacta con Jesús Torres — Arquitecto BIM. Escríbeme a través del formulario o por email.">
+    <!-- SEO -->
+    <meta name="author" content="Jesús Torres Suárez">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://jesustorressuarez.github.io/JesusTorres/es/contact.html">
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Jesús Torres Suárez">
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:title" content="Jesús Torres Suárez | Contacto">
+    <meta property="og:description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
+    <meta property="og:url" content="https://jesustorressuarez.github.io/JesusTorres/es/contact.html">
+    <meta property="og:image" content="https://jesustorressuarez.github.io/JesusTorres/assets/img/jesus.avif">
+    <title>Jesús Torres Suárez | Contacto</title>
+    <meta name="description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
 
         <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 
@@ -63,10 +75,22 @@
             inset: 0;
             background: var(--General-100, #f2f2f2);
             opacity: 0;
-            transition: opacity .8s ease;
+            transition: opacity .5s ease;
         }
         .success-overlay.active .success-overlay__bg {
-            opacity: 0;
+            opacity: 1;
+        }
+        .header {
+            z-index: 10001;
+        }
+        /* Cuando el overlay está activo: solo logo visible */
+        body.overlay-active .nav--desktop,
+        body.overlay-active .lang-selector--desktop,
+        body.overlay-active .burger,
+        body.overlay-active .mobile-menu {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity .3s ease;
         }
         .success-overlay__content {
             position: relative;
@@ -76,7 +100,8 @@
             align-items: center;
         }
         .success-overlay__gif {
-            width: min(65vw, 340px);
+            position: relative;
+            width: min(75vw, 420px);
             opacity: 0;
             transform: scale(.3) rotate(-10deg);
             transition: opacity .4s ease .2s, transform .6s cubic-bezier(.17,.67,.29,1.3) .2s;
@@ -100,7 +125,7 @@
             white-space: nowrap;
             overflow: visible !important;
             line-height: 1.15 !important;
-            font-size: clamp(2.5rem, 9vw, 5.667rem);
+            font-size: clamp(3rem, 11vw, 6.5rem);
             font-weight: var(--text-black, 900);
             color: var(--General-400, #262626);
             letter-spacing: -3.5px;
@@ -113,19 +138,19 @@
             opacity: 1;
             transform: scale(1);
         }
-        .success-overlay__gracias .hero-cursor {
-            background: var(--General-400, #262626);
-        }
         .success-overlay__sub {
             margin-top: 12px;
+            white-space: nowrap;
+            overflow: visible !important;
+            line-height: 1.15 !important;
             font-family: 'Inter', sans-serif;
             font-weight: var(--text-regular, 400);
-            font-size: clamp(0.75rem, 2vw, 0.9rem);
-            color: var(--General-200, #999);
+            font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+            color: var(--General-200, #8D8D8D);
             letter-spacing: 0.5px;
             opacity: 0;
             transform: translateY(8px);
-            transition: opacity .4s ease 1s, transform .4s ease 1s;
+            transition: opacity .4s ease 1s, transform .4s ease 1s, font-family 0.05s, font-size 0.15s ease;
         }
         .success-overlay.active .success-overlay__sub {
             opacity: 1;
@@ -137,8 +162,38 @@
             z-index: 0;
             pointer-events: none;
         }
+        .success-overlay__gif-wrapper {
+            position: relative;
+            display: inline-block;
+        }
         .success-overlay .close-btn {
+            position: absolute;
+            top: -6px;
+            right: -40px;
             color: var(--General-400, #262626);
+            font-size: 2.200rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 10001;
+            line-height: 1;
+            padding: 0;
+        }
+        @media (max-width: 768px) {
+            .success-overlay__gif {
+                width: min(70vw, 300px);
+            }
+            .success-overlay .close-btn {
+                top: -6px;
+                right: -32px;
+                font-size: 1.8rem;
+            }
+            .success-overlay__text-block {
+                margin-top: 16px;
+            }
+            .success-overlay__sub {
+                margin-top: 8px;
+            }
         }
     </style>
 
@@ -294,11 +349,52 @@
                             <span class="error-msg">Por favor, escribe un mensaje</span>
                         </div>
 
-                        <div class="input-group">
-                            <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" ">
-                            <label for="telefono">Teléfono <span class="label-hint">(opcional)</span></label>
-                            <span class="bar"></span>
-                            <span class="error-msg" id="phoneError">Incluye el prefijo (ej. +34 612 345 678)</span>
+                        <div class="input-group phone-group">
+                            <!-- Fase 1: placeholder clickable -->
+                            <div class="phone-placeholder" id="phonePlaceholder">
+                                <span class="phone-placeholder-text">Teléfono <span class="label-hint">(opcional)</span></span>
+                            </div>
+                            <!-- Fase 2: selector de código + input (oculto inicialmente) -->
+                            <div class="phone-active" id="phoneActive" style="display:none;">
+                                <div class="phone-code-wrapper">
+                                    <select id="phoneCode" class="phone-code-select">
+                                        <option value="" disabled selected>Código</option>
+                                        <option value="+34">🇪🇸 +34</option>
+                                        <option value="+49">🇩🇪 +49</option>
+                                        <option value="+41">🇨🇭 +41</option>
+                                        <option value="+33">🇫🇷 +33</option>
+                                        <option value="+44">🇬🇧 +44</option>
+                                        <option value="+39">🇮🇹 +39</option>
+                                        <option value="+351">🇵🇹 +351</option>
+                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+52">🇲🇽 +52</option>
+                                        <option value="+54">🇦🇷 +54</option>
+                                        <option value="+56">🇨🇱 +56</option>
+                                        <option value="+57">🇨🇴 +57</option>
+                                        <option value="+55">🇧🇷 +55</option>
+                                        <option value="+31">🇳🇱 +31</option>
+                                        <option value="+32">🇧🇪 +32</option>
+                                        <option value="+43">🇦🇹 +43</option>
+                                        <option value="+48">🇵🇱 +48</option>
+                                        <option value="+46">🇸🇪 +46</option>
+                                        <option value="+45">🇩🇰 +45</option>
+                                        <option value="+47">🇳🇴 +47</option>
+                                        <option value="+81">🇯🇵 +81</option>
+                                        <option value="+82">🇰🇷 +82</option>
+                                        <option value="+86">🇨🇳 +86</option>
+                                        <option value="+91">🇮🇳 +91</option>
+                                        <option value="+61">🇦🇺 +61</option>
+                                        <option value="+212">🇲🇦 +212</option>
+                                    </select>
+                                </div>
+                                <div class="phone-number-wrapper">
+                                    <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" " disabled>
+                                    <label for="telefono">Número</label>
+                                    <span class="bar"></span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="phoneFullValue" name="phone_full">
+                            <span class="error-msg" id="phoneError">Número incorrecto</span>
                         </div>
 
                         <button class="cta_form" type="submit">Enviar</button>
@@ -360,14 +456,16 @@
     <div class="success-overlay" id="successOverlay">
         <div class="success-overlay__bg"></div>
         <canvas class="confetti-canvas" id="confettiCanvas"></canvas>
-        <span class="close-btn" onclick="closeSuccess()">&times;</span>
         <div class="success-overlay__content">
-            <div class="success-overlay__gif">
-                <img src="../assets/img/jesus-dancing.gif" alt="Jesús bailando">
+            <div class="success-overlay__gif-wrapper">
+                <div class="success-overlay__gif">
+                    <img src="../assets/img/jesus-dancing.gif" alt="Jesús bailando">
+                </div>
+                <span class="close-btn" onclick="event.stopPropagation(); closeSuccess()">&times;</span>
             </div>
             <div class="success-overlay__text-block">
-                <h2 class="success-overlay__gracias" id="graciasTitle">Gracias!<span class="hero-cursor" id="graciasCursor"></span></h2>
-                <p class="success-overlay__sub">Te responderé lo antes posible</p>
+                <h2 class="success-overlay__gracias" id="graciasTitle">¡Gracias!</h2>
+                <p class="success-overlay__sub" id="graciasSub">¡Te responderé lo antes posible!</p>
             </div>
         </div>
     </div>
@@ -433,8 +531,9 @@
                 var container = el.parentElement;
                 var isMobile = window.innerWidth <= 768;
                 var availableWidth = isMobile ? container.clientWidth : (container.clientWidth / 2 - 16);
+                var actualLetterSpacing = getComputedStyle(el).letterSpacing;
                 var measureEl = document.createElement('span');
-                measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:-3.5px;';
+                measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:' + actualLetterSpacing + ';';
                 document.body.appendChild(measureEl);
                 phrases.forEach(function (p) {
                     measureEl.style.fontFamily = p.font;
@@ -554,63 +653,89 @@
         (function () {
             var overlay = document.getElementById('successOverlay');
             var graciasEl = document.getElementById('graciasTitle');
-            var graciasCursor = document.getElementById('graciasCursor');
+            var graciasSubEl = document.getElementById('graciasSub');
             if (!overlay || !graciasEl) return;
 
-            /* ── Text node setup (same pattern as hablamos) ── */
-            while (graciasEl.firstChild !== graciasCursor) { graciasEl.removeChild(graciasEl.firstChild); }
-            var textNode = document.createTextNode('');
-            graciasEl.insertBefore(textNode, graciasCursor);
+            /* ── Text node setup for title ── */
+            graciasEl.textContent = '';
+            var titleNode = document.createTextNode('');
+            graciasEl.appendChild(titleNode);
 
-            function setText(str) { textNode.nodeValue = str; }
-            function showCursor() { graciasCursor.classList.add('visible'); }
-            function hideCursor() { graciasCursor.classList.remove('visible'); }
+            /* ── Text node setup for subtitle ── */
+            graciasSubEl.textContent = '';
+            var subNode = document.createTextNode('');
+            graciasSubEl.appendChild(subNode);
 
-            /* ── Phrases (same structure as hablamos) ── */
+            function setTitle(str) { titleNode.nodeValue = str; }
+            function setSub(str) { subNode.nodeValue = str; }
+
+            /* ── Phrases ── */
             var phrases = [
-                { text: 'Gracias!',      font: "'Inter', sans-serif",           fontStyle: 'normal' },
-                { text: 'Thank you!',    font: "'DM Serif Text', serif",        fontStyle: 'normal' },
-                { text: 'ありがとう！',     font: "'Noto Sans JP', sans-serif",    fontStyle: 'normal' },
-                { text: 'Danke!',        font: "'UnifrakturMaguntia', cursive", fontStyle: 'normal' },
-                { text: 'Grazie!',       font: "'Playfair Display', serif",     fontStyle: 'italic' },
-                { text: '謝謝！',          font: "'Noto Sans TC', sans-serif",    fontStyle: 'normal' }
+                { text: '¡Gracias!',     font: "'Inter', sans-serif",           fontStyle: 'normal', sub: '¡Te responderé lo antes posible!' },
+                { text: 'Thank you!',    font: "'DM Serif Text', serif",        fontStyle: 'normal', sub: "I'll get back to you as soon as possible!" },
+                { text: 'ありがとう！',     font: "'Noto Sans JP', sans-serif",    fontStyle: 'normal', sub: 'できるだけ早くご連絡します！' },
+                { text: 'Danke!',        font: "'UnifrakturMaguntia', cursive", fontStyle: 'normal', sub: 'Ich melde mich so bald wie möglich!' },
+                { text: 'Grazie!',       font: "'Playfair Display', serif",     fontStyle: 'italic', sub: 'Ti risponderò il prima possibile!' },
+                { text: '謝謝！',          font: "'Noto Sans TC', sans-serif",    fontStyle: 'normal', sub: '我會盡快回覆您！' }
             ];
 
             var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz¿?¡!@#&あ漢話聊';
-            var PAUSE = 2000;
+            var PAUSE = 3000;
             var SCRAMBLE_FRAMES = 5;
             var FRAME_SPEED = Math.round(200 / SCRAMBLE_FRAMES);
             var currentIdx = 0;
             var scrambleInterval = null;
+            var subScrambleInterval = null;
             var animTimeout = null;
 
             /* ── Auto-scale (same logic as hablamos) ── */
             function getBaseFontSize() {
-                return window.innerWidth <= 768 ? 2.5 : 5.667;
+                return window.innerWidth <= 768 ? 3 : 6.5;
             }
             var BASE_FONT_SIZE = getBaseFontSize();
 
+            function getSubFontSize() {
+                return window.innerWidth <= 768 ? 0.85 : 1.1;
+            }
+            var SUB_FONT_SIZE = getSubFontSize();
+
             function calcScales() {
                 BASE_FONT_SIZE = getBaseFontSize();
+                SUB_FONT_SIZE = getSubFontSize();
                 var containerWidth = window.innerWidth * 0.85;
                 var measureEl = document.createElement('span');
                 measureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:900;letter-spacing:-3.5px;';
                 document.body.appendChild(measureEl);
+
+                /* Sub measure element (different weight/spacing) */
+                var subMeasureEl = document.createElement('span');
+                subMeasureEl.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:400;letter-spacing:0.5px;';
+                document.body.appendChild(subMeasureEl);
+
                 phrases.forEach(function (p) {
+                    /* Title scale */
                     measureEl.style.fontFamily = p.font;
                     measureEl.style.fontStyle = p.fontStyle;
                     measureEl.style.fontSize = BASE_FONT_SIZE + 'rem';
                     measureEl.textContent = p.text;
                     var textWidth = measureEl.offsetWidth;
                     p.scale = textWidth > containerWidth ? (containerWidth / textWidth) : 1;
+
+                    /* Sub scale */
+                    subMeasureEl.style.fontFamily = p.font;
+                    subMeasureEl.style.fontStyle = p.fontStyle;
+                    subMeasureEl.style.fontSize = SUB_FONT_SIZE + 'rem';
+                    subMeasureEl.textContent = p.sub;
+                    var subWidth = subMeasureEl.offsetWidth;
+                    p.subScale = subWidth > containerWidth ? (containerWidth / subWidth) : 1;
                 });
                 document.body.removeChild(measureEl);
+                document.body.removeChild(subMeasureEl);
             }
 
-            /* ── Scramble (identical to hablamos) ── */
+            /* ── Scramble title ── */
             function scrambleTo(target, phrase, callback) {
                 clearInterval(scrambleInterval);
-                hideCursor();
                 var frame = 0;
                 var LOCK_FROM = 2;
                 var LOCK_TO = SCRAMBLE_FRAMES - 1;
@@ -632,12 +757,45 @@
                             if (frame >= lockFrames[i]) { result += target[i]; }
                             else { result += chars[Math.floor(Math.random() * chars.length)]; }
                         }
-                        setText(result);
+                        setTitle(result);
                         frame++;
                     } else {
-                        setText(target);
+                        setTitle(target);
                         clearInterval(scrambleInterval);
-                        showCursor();
+                        if (callback) callback();
+                    }
+                }, FRAME_SPEED);
+            }
+
+            /* ── Scramble subtitle ── */
+            function scrambleSubTo(target, phrase, callback) {
+                clearInterval(subScrambleInterval);
+                var frame = 0;
+                var LOCK_FROM = 2;
+                var LOCK_TO = SCRAMBLE_FRAMES - 1;
+
+                graciasSubEl.style.fontFamily = phrase.font;
+                graciasSubEl.style.fontStyle = phrase.fontStyle;
+                graciasSubEl.style.fontSize = (SUB_FONT_SIZE * (phrase.subScale || 1)) + 'rem';
+
+                var lockFrames = [];
+                for (var i = 0; i < target.length; i++) {
+                    if (target[i] === ' ') { lockFrames.push(0); }
+                    else { lockFrames.push(LOCK_FROM + Math.floor(Math.random() * (LOCK_TO - LOCK_FROM + 1))); }
+                }
+
+                subScrambleInterval = setInterval(function () {
+                    if (frame < SCRAMBLE_FRAMES) {
+                        var result = '';
+                        for (var i = 0; i < target.length; i++) {
+                            if (frame >= lockFrames[i]) { result += target[i]; }
+                            else { result += chars[Math.floor(Math.random() * chars.length)]; }
+                        }
+                        setSub(result);
+                        frame++;
+                    } else {
+                        setSub(target);
+                        clearInterval(subScrambleInterval);
                         if (callback) callback();
                     }
                 }, FRAME_SPEED);
@@ -649,6 +807,7 @@
                 scrambleTo(p.text, p, function () {
                     animTimeout = setTimeout(next, PAUSE);
                 });
+                scrambleSubTo(p.sub, p);
             }
 
             /* ── Confetti ── */
@@ -706,6 +865,11 @@
                 if (confettiRAF) cancelAnimationFrame(confettiRAF);
             }
 
+            /* ── Matasuegras sound ── */
+            var matasuegrasSound = new Audio('../assets/audio/matasuegras.mp3');
+            matasuegrasSound.preload = 'auto';
+            matasuegrasSound.volume = 0.7;
+
             /* ── Open / Close ── */
             function openSuccess() {
                 calcScales();
@@ -714,16 +878,22 @@
                 graciasEl.style.fontFamily = first.font;
                 graciasEl.style.fontStyle = first.fontStyle;
                 graciasEl.style.fontSize = (BASE_FONT_SIZE * first.scale) + 'rem';
-                setText('');
-                hideCursor();
+                graciasSubEl.style.fontFamily = first.font;
+                graciasSubEl.style.fontStyle = first.fontStyle;
+                graciasSubEl.style.fontSize = (SUB_FONT_SIZE * (first.subScale || 1)) + 'rem';
+                setTitle('');
+                setSub('');
 
                 overlay.classList.add('active');
+                document.body.classList.add('overlay-active');
                 document.body.style.overflow = 'hidden';
                 if (typeof lenis !== 'undefined') lenis.stop();
 
                 startConfetti();
+                matasuegrasSound.currentTime = 0;
+                matasuegrasSound.play().catch(function(e) { console.warn('Matasuegras audio error:', e); });
 
-                /* Intro scramble (longer, like hablamos intro) */
+                /* Intro scramble for title (longer, like hablamos intro) */
                 var INTRO_FRAMES = 18;
                 var INTRO_SPEED = Math.round(700 / INTRO_FRAMES);
                 var INTRO_LOCK_FROM = 10;
@@ -735,6 +905,14 @@
                     else { introLockFrames.push(INTRO_LOCK_FROM + Math.floor(Math.random() * (INTRO_FRAMES - INTRO_LOCK_FROM))); }
                 }
 
+                /* Intro scramble for subtitle (same timing) */
+                var subIntroFrame = 0;
+                var subIntroLockFrames = [];
+                for (var j = 0; j < first.sub.length; j++) {
+                    if (first.sub[j] === ' ') { subIntroLockFrames.push(0); }
+                    else { subIntroLockFrames.push(INTRO_LOCK_FROM + Math.floor(Math.random() * (INTRO_FRAMES - INTRO_LOCK_FROM))); }
+                }
+
                 var introInterval = setInterval(function () {
                     if (introFrame < INTRO_FRAMES) {
                         var result = '';
@@ -742,12 +920,21 @@
                             if (introFrame >= introLockFrames[i]) { result += first.text[i]; }
                             else { result += chars[Math.floor(Math.random() * chars.length)]; }
                         }
-                        setText(result);
+                        setTitle(result);
+
+                        var subResult = '';
+                        for (var j = 0; j < first.sub.length; j++) {
+                            if (subIntroFrame >= subIntroLockFrames[j]) { subResult += first.sub[j]; }
+                            else { subResult += chars[Math.floor(Math.random() * chars.length)]; }
+                        }
+                        setSub(subResult);
+
                         introFrame++;
+                        subIntroFrame++;
                     } else {
-                        setText(first.text);
+                        setTitle(first.text);
+                        setSub(first.sub);
                         clearInterval(introInterval);
-                        showCursor();
                         animTimeout = setTimeout(next, PAUSE);
                     }
                 }, INTRO_SPEED);
@@ -755,13 +942,17 @@
 
             window.closeSuccess = function () {
                 overlay.classList.remove('active');
+                document.body.classList.remove('overlay-active');
                 document.body.style.overflow = '';
                 if (typeof lenis !== 'undefined') lenis.start();
                 stopConfetti();
+                matasuegrasSound.pause();
+                matasuegrasSound.currentTime = 0;
                 clearInterval(scrambleInterval);
+                clearInterval(subScrambleInterval);
                 clearTimeout(animTimeout);
-                setText('');
-                hideCursor();
+                setTitle('');
+                setSub('');
                 currentIdx = 0;
             };
 
@@ -779,15 +970,107 @@
                 }
             });
 
+            /* ── Phone component: click → select code → enable input ── */
+            var phonePlaceholder = document.getElementById('phonePlaceholder');
+            var phoneActive = document.getElementById('phoneActive');
+            var phoneCode = document.getElementById('phoneCode');
+            var phoneInput = document.getElementById('telefono');
+            var phoneFullValue = document.getElementById('phoneFullValue');
+            var phoneGroup = phonePlaceholder ? phonePlaceholder.closest('.input-group') : null;
+
+            if (phonePlaceholder) {
+                phonePlaceholder.addEventListener('click', function () {
+                    phonePlaceholder.style.display = 'none';
+                    phoneActive.style.display = 'flex';
+                    phoneCode.focus();
+                });
+            }
+
+            if (phoneCode) {
+                phoneCode.addEventListener('change', function () {
+                    if (phoneCode.value !== '') {
+                        phoneInput.disabled = false;
+                        phoneInput.focus();
+                    }
+                });
+            }
+
+            /* Sync hidden field con código + número */
+            function syncPhoneValue() {
+                if (!phoneCode || !phoneInput) return;
+                var code = phoneCode.value || '';
+                var num = phoneInput.value.trim();
+                phoneFullValue.value = (code && num) ? code + ' ' + num : '';
+            }
+
+            if (phoneInput) phoneInput.addEventListener('input', syncPhoneValue);
+            if (phoneCode) phoneCode.addEventListener('change', syncPhoneValue);
+
             /* ── Intercept form submit → send via fetch, then show overlay ── */
             var form = document.getElementById('contactForm');
             if (form) {
                 form.addEventListener('submit', function (e) {
-                    /* Let the existing validation in scripts.js run first.
-                       If it called e.preventDefault(), we should not proceed. */
-                    if (e.defaultPrevented) return;
+                    e.preventDefault(); // Siempre prevenir — enviamos via fetch
 
-                    e.preventDefault();
+                    /* ── Validación propia (no depender de otro listener) ── */
+                    var isValid = true;
+                    var requiredInputs = form.querySelectorAll('[required]');
+
+                    requiredInputs.forEach(function (input) {
+                        var group = input.closest('.input-group');
+                        var isEmpty = input.value.trim() === '';
+                        var isEmailInvalid = input.type === 'email'
+                            && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value);
+
+                        if (isEmpty || isEmailInvalid) {
+                            group.classList.add('error');
+                            isValid = false;
+                        } else {
+                            group.classList.remove('error');
+                        }
+                    });
+
+                    // Teléfono: opcional, pero si se rellena con menos de 9 cifras → error
+                    if (phoneInput && phoneGroup) {
+                        var phoneError = document.getElementById('phoneError');
+                        var phoneVal = phoneInput.value.trim();
+                        var phoneActivated = phoneActive && phoneActive.style.display !== 'none';
+
+                        if (phoneActivated && phoneVal !== '') {
+                            // Tiene número: comprobar que tiene al menos 9 cifras
+                            var digits = phoneVal.replace(/[^0-9]/g, '');
+                            if (digits.length < 9) {
+                                phoneError.textContent = 'Número incorrecto';
+                                phoneGroup.classList.add('error');
+                                isValid = false;
+                            } else if (!phoneCode.value) {
+                                // Número escrito pero sin código seleccionado
+                                phoneError.textContent = 'Selecciona un código de país';
+                                phoneGroup.classList.add('error');
+                                isValid = false;
+                            } else {
+                                phoneGroup.classList.remove('error');
+                            }
+                        } else if (phoneActivated && phoneCode.value && phoneVal === '') {
+                            // Seleccionó código pero dejó vacío el número → permitir (es opcional)
+                            phoneGroup.classList.remove('error');
+                        } else {
+                            // No interactuó o está todo vacío → OK, es opcional
+                            phoneGroup.classList.remove('error');
+                        }
+
+                        // Sincronizar valor final
+                        syncPhoneValue();
+                    }
+
+                    if (!isValid) return; // No enviar si hay errores
+
+                    // Sincronizar _replyto
+                    var replytoInput = document.getElementById('replyto');
+                    var emailInput = document.getElementById('email');
+                    if (replytoInput && emailInput) {
+                        replytoInput.value = emailInput.value;
+                    }
 
                     var formData = new FormData(form);
 
@@ -801,6 +1084,14 @@
                             form.querySelectorAll('.input-group').forEach(function (g) {
                                 g.classList.remove('error');
                             });
+                            // Resetear phone component al estado inicial
+                            if (phonePlaceholder && phoneActive) {
+                                phonePlaceholder.style.display = '';
+                                phoneActive.style.display = 'none';
+                                phoneInput.disabled = true;
+                                phoneCode.selectedIndex = 0;
+                                phoneFullValue.value = '';
+                            }
                             openSuccess();
                         }
                     }).catch(function () {
