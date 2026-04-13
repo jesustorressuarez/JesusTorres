@@ -951,7 +951,6 @@ html.lenis, html.lenis body {
     width: 160px;
     background: #000;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
     overflow: hidden;
     z-index: 10002;
     pointer-events: none;
@@ -972,6 +971,21 @@ html.lenis, html.lenis body {
     background: rgba(255, 51, 51, 0.12);
     pointer-events: none;
     transition: none;
+}
+
+.modal-slide-counter {
+    position: absolute;
+    bottom: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.722rem;
+    font-weight: var(--text-regular);
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: -0.52px;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+    pointer-events: none;
+    z-index: 10001;
 }
 
 .close-btn {

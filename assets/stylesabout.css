@@ -321,4 +321,117 @@ a.big_button {
     .marquee__content {
         animation-duration: 25s;
     }
+
+    /* Tooltip mobile */
+    .sw-tooltip.open {
+        max-height: 220px;
+    }
+    .sw-tooltip__inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 20px 24px;
+    }
+    .sw-tooltip__close {
+        position: absolute;
+        right: 16px;
+        top: 14px;
+    }
+    .sw-tooltip {
+        position: relative;
+    }
+    .sw-tooltip__icon {
+        height: 1.8rem;
+    }
+}
+
+/*TOOLTIP SOFTWARE*/
+
+.sw-item {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.sw-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.sw-item.active {
+    background: rgba(255,255,255,0.15);
+}
+
+.sw-tooltip {
+    width: 100%;
+    background: #fff;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease;
+}
+
+.sw-tooltip.open {
+    max-height: 140px;
+    opacity: 1;
+}
+
+.sw-tooltip__inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.sw-tooltip__icon {
+    height: 2.2rem;
+    width: auto;
+    flex-shrink: 0;
+    filter: brightness(0);
+}
+
+.sw-tooltip__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sw-tooltip__name {
+    font-size: 1rem;
+    font-weight: var(--text-extrabold);
+    color: var(--General-400);
+    letter-spacing: -0.5px;
+}
+
+.sw-tooltip__desc {
+    font-size: 0.889rem;
+    font-weight: var(--text-regular);
+    color: var(--General-300);
+    letter-spacing: -0.52px;
+    line-height: 1.45;
+}
+
+.sw-tooltip__close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--General-200);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.sw-tooltip__close:hover {
+    color: var(--General-400);
+    background: var(--General-100);
 }

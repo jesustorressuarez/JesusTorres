@@ -245,6 +245,19 @@
             if (!zoomMinimap || !minimapImg) { return; }
             minimapImg.src = src;
             zoomMinimap.classList.add('active');
+            positionMinimap();
+        }
+
+        function positionMinimap() {
+            if (!zoomMinimap || !zoomWrapper || !imgZoom) { return; }
+            var wrapperRect = zoomWrapper.getBoundingClientRect();
+            var imgRect = imgZoom.getBoundingClientRect();
+            // Esquina inferior izquierda de la foto, dentro del wrapper
+            var imgLeft = imgRect.left - wrapperRect.left;
+            var imgBottom = wrapperRect.bottom - imgRect.bottom;
+            var gap = 8;
+            zoomMinimap.style.left = (imgLeft + gap) + 'px';
+            zoomMinimap.style.bottom = (imgBottom + gap) + 'px';
         }
 
         function hideMinimap() {
@@ -302,6 +315,21 @@
             updateMinimapViewport(tx, ty);
         }
 
+        // --- Contador de diapositivas en modal (solo proyectos, no galerías de fotos) ---
+        var isGalleryCarousel = track && track.classList.contains('is-gallery');
+        var modalCounter = null;
+        if (modal && slides.length > 1 && !isGalleryCarousel) {
+            modalCounter = document.createElement('span');
+            modalCounter.classList.add('modal-slide-counter');
+            modal.appendChild(modalCounter);
+        }
+
+        function updateModalCounter() {
+            if (modalCounter) {
+                modalCounter.textContent = (currentIdx + 1) + ' / ' + slides.length;
+            }
+        }
+
         // --- Abrir / Cerrar Modal ---
 
         window.openZoom = function (src) {
@@ -314,6 +342,7 @@
             if (typeof lenis !== 'undefined') { lenis.stop(); }
             resetZoom();
             updateModalNavButtons();
+            updateModalCounter();
         };
 
         window.closeZoom = function () {
@@ -326,7 +355,6 @@
         };
 
         // --- Carrusel sin bucle (solo proyectos, no galerías de fotos) ---
-        var isGalleryCarousel = track && track.classList.contains('is-gallery');
 
         function updateNavButtons() {
             if (!track || isGalleryCarousel) { return; }
@@ -364,6 +392,7 @@
             imgZoom.src = slides[currentIdx].src;
             resetZoom();
             updateModalNavButtons();
+            updateModalCounter();
         };
 
         function updateModalNavButtons() {
