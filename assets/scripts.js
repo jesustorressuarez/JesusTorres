@@ -619,8 +619,8 @@
             // Limpiar error del teléfono al escribir
             if (telefono) {
                 telefono.addEventListener('input', function () {
-                    var digits = telefono.value.replace(/[^0-9]/g, '');
-                    if (telefono.value.trim() === '' || digits.length >= 9) {
+                    var phoneVal = telefono.value.trim();
+                    if (phoneVal === '' || phoneVal.startsWith('+')) {
                         telefono.closest('.input-group').classList.remove('error');
                     }
                 });

@@ -1,39 +1,10 @@
 /* =========================
-   RESET & BASE
+   MENÚ & NAVEGACIÓN
+   ─────────────────────────
+   ⚠️  NO añadir aquí reglas de reset (*, html, body, :root).
+   ⚠️  Esas reglas viven SOLO en styles.css.
+   ⚠️  Duplicarlas aquí rompe el footer (height:100% bug).
 ========================= */
-
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-
-html, body{
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeSpeed;
-    background-color: var(--General-100);
-    margin: 0 auto;
-    font-family: "Inter", sans-serif;
-    font-size: 18px;
-    height: 100%;
-    width: 100%;
-}
-
-:root{
-    /* Paleta de colores */
-    --General-400: #262626;
-    --General-300: #5B5A5A;
-    --General-200: #8D8D8D;
-    --General-100: #f2f2f2;
-
-    /* Grosor de texto*/
-    --text-black: 900;
-    --text-extrabold: 800;
-    --text-regular: 400;
-}
 
 /* =========================
    HEADER

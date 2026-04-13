@@ -15,6 +15,11 @@
     <meta property="og:description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
     <meta property="og:url" content="https://jesustorressuarez.github.io/JesusTorres/es/contact.html">
     <meta property="og:image" content="https://jesustorressuarez.github.io/JesusTorres/assets/img/jesus.avif">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Jesús Torres Suárez | Contacto">
+    <meta name="twitter:description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
+    <meta name="twitter:image" content="https://jesustorressuarez.github.io/JesusTorres/assets/img/jesus.avif">
     <title>Jesús Torres Suárez | Contacto</title>
     <meta name="description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
 
@@ -349,52 +354,11 @@
                             <span class="error-msg">Por favor, escribe un mensaje</span>
                         </div>
 
-                        <div class="input-group phone-group">
-                            <!-- Fase 1: placeholder clickable -->
-                            <div class="phone-placeholder" id="phonePlaceholder">
-                                <span class="phone-placeholder-text">Teléfono <span class="label-hint">(opcional)</span></span>
-                            </div>
-                            <!-- Fase 2: selector de código + input (oculto inicialmente) -->
-                            <div class="phone-active" id="phoneActive" style="display:none;">
-                                <div class="phone-code-wrapper">
-                                    <select id="phoneCode" class="phone-code-select">
-                                        <option value="" disabled selected>Código</option>
-                                        <option value="+34">🇪🇸 +34</option>
-                                        <option value="+49">🇩🇪 +49</option>
-                                        <option value="+41">🇨🇭 +41</option>
-                                        <option value="+33">🇫🇷 +33</option>
-                                        <option value="+44">🇬🇧 +44</option>
-                                        <option value="+39">🇮🇹 +39</option>
-                                        <option value="+351">🇵🇹 +351</option>
-                                        <option value="+1">🇺🇸 +1</option>
-                                        <option value="+52">🇲🇽 +52</option>
-                                        <option value="+54">🇦🇷 +54</option>
-                                        <option value="+56">🇨🇱 +56</option>
-                                        <option value="+57">🇨🇴 +57</option>
-                                        <option value="+55">🇧🇷 +55</option>
-                                        <option value="+31">🇳🇱 +31</option>
-                                        <option value="+32">🇧🇪 +32</option>
-                                        <option value="+43">🇦🇹 +43</option>
-                                        <option value="+48">🇵🇱 +48</option>
-                                        <option value="+46">🇸🇪 +46</option>
-                                        <option value="+45">🇩🇰 +45</option>
-                                        <option value="+47">🇳🇴 +47</option>
-                                        <option value="+81">🇯🇵 +81</option>
-                                        <option value="+82">🇰🇷 +82</option>
-                                        <option value="+86">🇨🇳 +86</option>
-                                        <option value="+91">🇮🇳 +91</option>
-                                        <option value="+61">🇦🇺 +61</option>
-                                        <option value="+212">🇲🇦 +212</option>
-                                    </select>
-                                </div>
-                                <div class="phone-number-wrapper">
-                                    <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" " disabled>
-                                    <label for="telefono">Número</label>
-                                    <span class="bar"></span>
-                                </div>
-                            </div>
-                            <input type="hidden" id="phoneFullValue" name="phone_full">
-                            <span class="error-msg" id="phoneError">Número incorrecto</span>
+                        <div class="input-group">
+                            <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" ">
+                            <label for="telefono">Teléfono <span class="label-hint">(opcional)</span></label>
+                            <span class="bar"></span>
+                            <span class="error-msg" id="phoneError">Incluye el prefijo (ej. +34 612 345 678)</span>
                         </div>
 
                         <button class="cta_form" type="submit">Enviar</button>
@@ -404,7 +368,7 @@
         </section>
 
 
-        <section style="padding-bottom: 8px;" class="wrapper">
+        <section class="wrapper footer-section">
             <div class="general_footer">
             <div class="general_footer_buttons">
                 <div class="logo_animado">
@@ -970,42 +934,6 @@
                 }
             });
 
-            /* ── Phone component: click → select code → enable input ── */
-            var phonePlaceholder = document.getElementById('phonePlaceholder');
-            var phoneActive = document.getElementById('phoneActive');
-            var phoneCode = document.getElementById('phoneCode');
-            var phoneInput = document.getElementById('telefono');
-            var phoneFullValue = document.getElementById('phoneFullValue');
-            var phoneGroup = phonePlaceholder ? phonePlaceholder.closest('.input-group') : null;
-
-            if (phonePlaceholder) {
-                phonePlaceholder.addEventListener('click', function () {
-                    phonePlaceholder.style.display = 'none';
-                    phoneActive.style.display = 'flex';
-                    phoneCode.focus();
-                });
-            }
-
-            if (phoneCode) {
-                phoneCode.addEventListener('change', function () {
-                    if (phoneCode.value !== '') {
-                        phoneInput.disabled = false;
-                        phoneInput.focus();
-                    }
-                });
-            }
-
-            /* Sync hidden field con código + número */
-            function syncPhoneValue() {
-                if (!phoneCode || !phoneInput) return;
-                var code = phoneCode.value || '';
-                var num = phoneInput.value.trim();
-                phoneFullValue.value = (code && num) ? code + ' ' + num : '';
-            }
-
-            if (phoneInput) phoneInput.addEventListener('input', syncPhoneValue);
-            if (phoneCode) phoneCode.addEventListener('change', syncPhoneValue);
-
             /* ── Intercept form submit → send via fetch, then show overlay ── */
             var form = document.getElementById('contactForm');
             if (form) {
@@ -1030,37 +958,37 @@
                         }
                     });
 
-                    // Teléfono: opcional, pero si se rellena con menos de 9 cifras → error
-                    if (phoneInput && phoneGroup) {
+                    // Teléfono: opcional, pero si se rellena debe tener prefijo + 9 cifras
+                    var telefono = document.getElementById('telefono');
+                    if (telefono) {
+                        var phoneGroup = telefono.closest('.input-group');
                         var phoneError = document.getElementById('phoneError');
-                        var phoneVal = phoneInput.value.trim();
-                        var phoneActivated = phoneActive && phoneActive.style.display !== 'none';
+                        var phoneVal = telefono.value.trim();
 
-                        if (phoneActivated && phoneVal !== '') {
-                            // Tiene número: comprobar que tiene al menos 9 cifras
-                            var digits = phoneVal.replace(/[^0-9]/g, '');
-                            if (digits.length < 9) {
-                                phoneError.textContent = 'Número incorrecto';
+                        if (phoneVal !== '') {
+                            var match = phoneVal.match(/^\+(\d{1,4})[\s\-]?(.*)$/);
+
+                            if (!phoneVal.startsWith('+')) {
+                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
                                 phoneGroup.classList.add('error');
                                 isValid = false;
-                            } else if (!phoneCode.value) {
-                                // Número escrito pero sin código seleccionado
-                                phoneError.textContent = 'Selecciona un código de país';
-                                phoneGroup.classList.add('error');
-                                isValid = false;
+                            } else if (match) {
+                                var numberDigits = match[2].replace(/[^0-9]/g, '').length;
+                                if (numberDigits !== 9) {
+                                    phoneError.textContent = 'El número debe tener 9 cifras';
+                                    phoneGroup.classList.add('error');
+                                    isValid = false;
+                                } else {
+                                    phoneGroup.classList.remove('error');
+                                }
                             } else {
-                                phoneGroup.classList.remove('error');
+                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
+                                phoneGroup.classList.add('error');
+                                isValid = false;
                             }
-                        } else if (phoneActivated && phoneCode.value && phoneVal === '') {
-                            // Seleccionó código pero dejó vacío el número → permitir (es opcional)
-                            phoneGroup.classList.remove('error');
                         } else {
-                            // No interactuó o está todo vacío → OK, es opcional
                             phoneGroup.classList.remove('error');
                         }
-
-                        // Sincronizar valor final
-                        syncPhoneValue();
                     }
 
                     if (!isValid) return; // No enviar si hay errores
@@ -1084,14 +1012,6 @@
                             form.querySelectorAll('.input-group').forEach(function (g) {
                                 g.classList.remove('error');
                             });
-                            // Resetear phone component al estado inicial
-                            if (phonePlaceholder && phoneActive) {
-                                phonePlaceholder.style.display = '';
-                                phoneActive.style.display = 'none';
-                                phoneInput.disabled = true;
-                                phoneCode.selectedIndex = 0;
-                                phoneFullValue.value = '';
-                            }
                             openSuccess();
                         }
                     }).catch(function () {
