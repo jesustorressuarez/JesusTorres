@@ -1,0 +1,21 @@
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales de FUSE/montaje (Cowork)
+.fuse_hidden*
+
+# Claude / herramientas de desarrollo
+.claude/
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.bak
