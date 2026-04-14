@@ -204,19 +204,62 @@
         </div>
 
         <div id="zoomModal" class="modal">
-            <span class="close-btn" onclick="closeZoom()">&times;</span>
-            
-            <button class="modal-nav prev-modal" onclick="changeModalImage(-1, event)">
-                <span class="chevron"></span>
-            </button>
-            
-            <div class="zoom-wrapper" id="zoomWrapper">
-                <img id="imgZoom" src="" alt="Vista ampliada">
+
+            <!-- Barra de navegación del modal -->
+            <div class="modal-nav-menu">
+                <div class="modal-nav-menu__nav-group">
+                    <button class="modal-nav-menu__btn modal-nav prev-modal" onclick="changeModalImage(-1, event)">Previo</button><span class="modal-nav-menu__slash">-</span><button class="modal-nav-menu__btn modal-nav next-modal" onclick="changeModalImage(1, event)">Siguiente</button>
+                </div>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn metadata-toggle" id="metadataToggle" onclick="window.toggleMetadata(event)">
+                    <span class="metadata-toggle-text">Mostrar metadatos</span>
+                </button>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn" onclick="closeZoom()">Cerrar</button>
             </div>
 
-            <button class="modal-nav next-modal" onclick="changeModalImage(1, event)">
-                <span class="chevron"></span>
-            </button>
+            <div class="modal-content-wrapper" id="modalContentWrapper">
+                <div class="zoom-wrapper" id="zoomWrapper">
+                    <img id="imgZoom" src="" alt="Vista ampliada">
+
+                    <div class="zoom-minimap" id="zoomMinimap">
+                        <img id="minimapImg" src="" alt="">
+                        <div class="zoom-minimap-viewport" id="minimapViewport"></div>
+                    </div>
+                </div>
+
+                <div class="metadata-panel" id="metadataPanel">
+                    <div class="metadata-info">
+                        <div class="metadata-header">
+                            <div class="metadata-header-left">
+                                <span class="metadata-title" id="metaTitle"></span>
+                                <span class="metadata-date-location" id="metaDateLocation"></span>
+                            </div>
+                        </div>
+                        <p class="metadata-description" id="metaDescription"></p>
+                    </div>
+                    <div class="metadata-technical" id="metaTechnical">
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Cámara</span>
+                            <span class="metadata-tech-value" id="metaCamera"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Objetivo</span>
+                            <span class="metadata-tech-value" id="metaLens"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Focal · Apertura</span>
+                            <span class="metadata-tech-value" id="metaFocalAperture"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">VEL · ISO</span>
+                            <span class="metadata-tech-value" id="metaSpeedIso"></span>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+
         </div>
     </section>
 

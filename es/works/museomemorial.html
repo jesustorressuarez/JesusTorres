@@ -136,7 +136,7 @@
             </p>
         </div>
         <div class="hero_details">
-            <img src="../../assets/img/memorial/museo-memorial_portada.png" alt="Imagen de ejemplo" onclick="openPortadaZoom(this.src)" style="cursor:pointer">
+            <img src="../../assets/img/memorial/museo-memorial_portada.png" alt="Imagen de ejemplo" onclick="openZoom(this.src)" style="cursor:pointer">
             <div class="hero_details_text">
             <div class="hero_details_column">
                 <div class="details">
@@ -195,24 +195,61 @@
         </div>
 
         <div id="zoomModal" class="modal">
-            <span class="close-btn" onclick="closeZoom()">&times;</span>
 
-            <button class="modal-nav prev-modal" onclick="changeModalImage(-1, event)">
-                <span class="chevron"></span>
-            </button>
-
-            <div class="zoom-wrapper" id="zoomWrapper">
-                <img id="imgZoom" src="" alt="Vista ampliada">
+            <!-- Barra de navegación del modal -->
+            <div class="modal-nav-menu">
+                <div class="modal-nav-menu__nav-group">
+                    <button class="modal-nav-menu__btn modal-nav prev-modal" onclick="changeModalImage(-1, event)">Previo</button><span class="modal-nav-menu__slash">-</span><button class="modal-nav-menu__btn modal-nav next-modal" onclick="changeModalImage(1, event)">Siguiente</button>
+                </div>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn metadata-toggle" id="metadataToggle" onclick="window.toggleMetadata(event)">
+                    <span class="metadata-toggle-text">Mostrar metadatos</span>
+                </button>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn" onclick="closeZoom()">Cerrar</button>
             </div>
 
-            <button class="modal-nav next-modal" onclick="changeModalImage(1, event)">
-                <span class="chevron"></span>
-            </button>
+            <div class="modal-content-wrapper" id="modalContentWrapper">
+                <div class="zoom-wrapper" id="zoomWrapper">
+                    <img id="imgZoom" src="" alt="Vista ampliada">
 
-            <div class="zoom-minimap" id="zoomMinimap">
-                <img id="minimapImg" src="" alt="">
-                <div class="zoom-minimap-viewport" id="minimapViewport"></div>
+                    <div class="zoom-minimap" id="zoomMinimap">
+                        <img id="minimapImg" src="" alt="">
+                        <div class="zoom-minimap-viewport" id="minimapViewport"></div>
+                    </div>
+                </div>
+
+                <div class="metadata-panel" id="metadataPanel">
+                    <div class="metadata-info">
+                        <div class="metadata-header">
+                            <div class="metadata-header-left">
+                                <span class="metadata-title" id="metaTitle"></span>
+                                <span class="metadata-date-location" id="metaDateLocation"></span>
+                            </div>
+                        </div>
+                        <p class="metadata-description" id="metaDescription"></p>
+                    </div>
+                    <div class="metadata-technical" id="metaTechnical">
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Cámara</span>
+                            <span class="metadata-tech-value" id="metaCamera"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Objetivo</span>
+                            <span class="metadata-tech-value" id="metaLens"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">Focal · Apertura</span>
+                            <span class="metadata-tech-value" id="metaFocalAperture"></span>
+                        </div>
+                        <div class="metadata-tech-item">
+                            <span class="metadata-tech-label">VEL · ISO</span>
+                            <span class="metadata-tech-value" id="metaSpeedIso"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
         </div>
     </section>
 
@@ -285,15 +322,7 @@
         </div>
         </div>
     </section>
-
-
-    <!-- Modal portada (independiente del carrusel) -->
-    <div id="portadaModal" style="display:none;position:fixed;z-index:10000;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;cursor:default">
-        <span onclick="closePortadaZoom()" style="position:absolute;top:20px;right:32px;font-size:2.5rem;color:#fff;cursor:pointer;z-index:10001">&times;</span>
-        <div id="portadaWrapper" style="width:90vw;height:90vh;display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative">
-            <img id="portadaImg" src="" alt="Vista ampliada" style="max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;transform-origin:center center;transition:transform 0.3s ease">
-        </div>
-    </div>
+</div>
 
     <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
     <script>
@@ -311,79 +340,6 @@
     <script src="../../assets/scripts.js"></script>
 
     <!-- Zoom portada (independiente del carrusel) -->
-    <script>
-    (function () {
-        var pModal = document.getElementById('portadaModal');
-        var pImg = document.getElementById('portadaImg');
-        var pWrapper = document.getElementById('portadaWrapper');
-        if (!pModal || !pImg) return;
-
-        var pZoomed = false;
-        var PZOOM = 2.5;
-        var pBaseW = 0, pBaseH = 0;
-
-        function resetPZoom() {
-            pZoomed = false;
-            pImg.style.transform = '';
-            pImg.style.cursor = 'zoom-in';
-            pImg.style.transition = 'transform 0.3s ease';
-            pBaseW = 0; pBaseH = 0;
-        }
-
-        window.openPortadaZoom = function (src) {
-            pImg.src = src;
-            pModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            if (typeof lenis !== 'undefined') lenis.stop();
-            resetPZoom();
-        };
-
-        window.closePortadaZoom = function () {
-            pModal.style.display = 'none';
-            document.body.style.overflow = '';
-            if (typeof lenis !== 'undefined') lenis.start();
-            resetPZoom();
-        };
-
-        pModal.addEventListener('click', function (e) {
-            if (e.target === pModal || e.target === pWrapper) closePortadaZoom();
-        });
-
-        pImg.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (!pZoomed) {
-                pBaseW = pImg.offsetWidth;
-                pBaseH = pImg.offsetHeight;
-                pZoomed = true;
-                pImg.style.cursor = 'zoom-out';
-                pImg.style.transition = 'none';
-                applyPPan(e);
-            } else {
-                resetPZoom();
-            }
-        });
-
-        function applyPPan(e) {
-            if (!pWrapper) return;
-            var wr = pWrapper.getBoundingClientRect();
-            var sW = pBaseW * PZOOM, sH = pBaseH * PZOOM;
-            var oX = Math.max(0, (sW - wr.width) / 2);
-            var oY = Math.max(0, (sH - wr.height) / 2);
-            var mx = ((e.clientX - wr.left) / wr.width) * 2 - 1;
-            var my = ((e.clientY - wr.top) / wr.height) * 2 - 1;
-            pImg.style.transform = 'translate(' + (-mx * oX) + 'px, ' + (-my * oY) + 'px) scale(' + PZOOM + ')';
-        }
-
-        pWrapper.addEventListener('mousemove', function (e) {
-            if (!pZoomed) return;
-            requestAnimationFrame(function () { applyPPan(e); });
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (pModal.style.display === 'flex' && e.key === 'Escape') closePortadaZoom();
-        });
-    })();
-    </script>
 
 </body>
 </html>
