@@ -336,9 +336,25 @@
         }
 
         function cacheBaseDimensions() {
-            if (imgZoom) {
-                baseImgW = imgZoom.offsetWidth;
-                baseImgH = imgZoom.offsetHeight;
+            if (imgZoom && zoomWrapper) {
+                var wr = zoomWrapper.getBoundingClientRect();
+                var iW = imgZoom.naturalWidth;
+                var iH = imgZoom.naturalHeight;
+                if (iW && iH) {
+                    // Calcular dimensiones reales renderizadas con object-fit: contain
+                    var wrapRatio = wr.width / wr.height;
+                    var imgRatio = iW / iH;
+                    if (imgRatio > wrapRatio) {
+                        baseImgW = wr.width;
+                        baseImgH = wr.width / imgRatio;
+                    } else {
+                        baseImgH = wr.height;
+                        baseImgW = wr.height * imgRatio;
+                    }
+                } else {
+                    baseImgW = imgZoom.offsetWidth;
+                    baseImgH = imgZoom.offsetHeight;
+                }
             }
         }
 
@@ -379,7 +395,7 @@
             currentIdx = Array.from(slides).findIndex(function (img) { return img.src === src; });
             imgZoom.src = src;
             modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
             document.body.style.touchAction = 'none';
             if (typeof lenis !== 'undefined') { lenis.stop(); }
             // Marcar modo galería para ocultar flechas en mobile
@@ -396,16 +412,15 @@
         window.closeZoom = function () {
             if (!modal) { return; }
             modal.style.display = 'none';
-            document.body.style.overflow = '';
+            document.body.classList.remove('modal-open');
             document.body.style.touchAction = '';
             if (typeof lenis !== 'undefined') { lenis.start(); }
             resetZoom();
             if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
             if (metaTechnical) { metaTechnical.classList.remove('open'); }
             if (metadataToggle) { metadataToggle.classList.remove('open'); }
-            if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
             var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
-            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
+            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
         };
 
         // --- Carrusel sin bucle (solo proyectos, no galerías de fotos) ---
@@ -502,12 +517,20 @@
             });
         }
 
+        // Flash visual en botón de navegación al usar teclado
+        function flashNavBtn(selector) {
+            var btn = document.querySelector(selector);
+            if (!btn) { return; }
+            btn.style.color = '#ffffff';
+            setTimeout(function () { btn.style.color = ''; }, 100);
+        }
+
         // Teclado: navegar / cerrar modal / mover carrusel
         document.addEventListener('keydown', function (e) {
             if (modal && modal.style.display === 'flex') {
                 if (e.key === 'Escape') { window.closeZoom(); }
-                if (e.key === 'ArrowRight') { e.preventDefault(); window.changeModalImage(1); }
-                if (e.key === 'ArrowLeft') { e.preventDefault(); window.changeModalImage(-1); }
+                if (e.key === 'ArrowRight') { e.preventDefault(); flashNavBtn('.next-modal'); window.changeModalImage(1); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); flashNavBtn('.prev-modal'); window.changeModalImage(-1); }
             } else if (track && !isGalleryCarousel) {
                 // Flechas mueven el carrusel de proyecto sin necesidad de foco
                 if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
@@ -870,38 +893,69 @@
 
         var metadataPanel = document.getElementById('metadataPanel');
         var metadataToggle = document.getElementById('metadataToggle');
-        var metadataToggleFloating = document.getElementById('metadataToggleFloating');
         var metaTechnical = document.getElementById('metaTechnical');
         var modalContentWrapper = document.getElementById('modalContentWrapper');
+        var exifPreference = true; // metadatos visibles por defecto
 
         function formatDate(dateStr) {
             if (!dateStr || dateStr.indexOf(':') === -1) { return dateStr; }
             var parts = dateStr.split(' ')[0].split(':');
             if (parts.length < 3) { return dateStr; }
-            var year = parseInt(parts[0], 10);
-            var month = parseInt(parts[1], 10) - 1;
-            var day = parseInt(parts[2], 10);
-            var date = new Date(year, month, day);
-            var options = { year: 'numeric', month: 'long', day: 'numeric' };
-            return date.toLocaleDateString('es-ES', options);
+            var year = parts[0].slice(-2);
+            var month = parts[1].padStart(2, '0');
+            var day = parts[2].padStart(2, '0');
+            return day + '/' + month + '/' + year;
+        }
+
+        function updateLensDisplay() {
+            var el = document.getElementById('metaLens');
+            if (!el || !el.dataset.lensFull) { return; }
+            var full = el.dataset.lensFull;
+            var abbr = el.dataset.lensAbbr || full;
+            if (full === '-' || full === abbr) { el.textContent = full; return; }
+            // Medir ancho natural forzando no-wrap
+            var prevWS = el.style.whiteSpace;
+            el.style.whiteSpace = 'nowrap';
+            el.textContent = full;
+            var natural = el.scrollWidth;
+            var available = el.clientWidth;
+            el.style.whiteSpace = prevWS;
+            el.textContent = (available > 0 && natural > available) ? abbr : full;
+        }
+
+        function syncPanelWidth() {
+            if (!metadataPanel || !imgZoom || !zoomWrapper) { return; }
+            var iW = imgZoom.naturalWidth;
+            var iH = imgZoom.naturalHeight;
+            if (!iW || !iH) { metadataPanel.style.width = ''; return; }
+            var wr = zoomWrapper.getBoundingClientRect();
+            var wrapRatio = wr.width / wr.height;
+            var imgRatio = iW / iH;
+            var renderedW = (imgRatio > wrapRatio) ? wr.width : wr.height * imgRatio;
+            metadataPanel.style.width = Math.round(renderedW) + 'px';
+            updateLensDisplay();
         }
 
         function updateMetadataPanel() {
-            if (!metadataPanel || !window.photoMetadata) { return; }
+            if (!metadataPanel) { return; }
+            if (!window.photoMetadata) {
+                metadataPanel.classList.add('hidden');
+                return;
+            }
 
             var currentSrc = imgZoom ? imgZoom.src : '';
             if (!currentSrc) {
                 if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
                 return;
             }
 
             // Las claves son rutas relativas, imgZoom.src es URL absoluta
             var metadata = null;
+            var decodedSrc = decodeURIComponent(currentSrc);
             var metaKeys = Object.keys(window.photoMetadata);
             for (var k = 0; k < metaKeys.length; k++) {
                 var normalizedKey = metaKeys[k].replace(/^\.\.\/\.\.\//,'');
-                if (currentSrc.indexOf(normalizedKey) !== -1) {
+                if (decodedSrc.indexOf(normalizedKey) !== -1) {
                     metadata = window.photoMetadata[metaKeys[k]];
                     break;
                 }
@@ -910,7 +964,6 @@
             // Si no hay metadata, ocultar todo
             if (!metadata) {
                 if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
                 return;
             }
 
@@ -920,10 +973,9 @@
             var hasLocation = metadata.location && metadata.location.trim() !== '';
             var hasTechData = !!(metadata.camera || metadata.lens || metadata.focal || metadata.aperture || metadata.speed || metadata.iso);
 
-            // Si no hay nada, ocultar todo
+            // Si no hay nada, ocultar todo (Caso 1)
             if (!hasTitle && !hasDescription && !hasLocation && !hasTechData) {
                 if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
                 return;
             }
 
@@ -959,7 +1011,13 @@
             var metaSpeedIso = document.getElementById('metaSpeedIso');
 
             if (metaCamera) { metaCamera.textContent = metadata.camera || '-'; }
-            if (metaLens) { metaLens.textContent = metadata.lens || '-'; }
+            if (metaLens) {
+                var lensFullName = metadata.lens || '-';
+                var lensMatch = lensFullName.match(/(\d+mm\s+f\/[\d.\-]+)/i);
+                metaLens.dataset.lensFull = lensFullName;
+                metaLens.dataset.lensAbbr = lensMatch ? lensMatch[1] : lensFullName;
+                metaLens.textContent = lensFullName; // se corregirá en syncPanelWidth
+            }
 
             var focalApertureText = [];
             if (metadata.focal) { focalApertureText.push(metadata.focal + 'mm'); }
@@ -971,25 +1029,14 @@
             if (metadata.iso) { speedIsoText.push('ISO ' + metadata.iso); }
             if (metaSpeedIso) { metaSpeedIso.textContent = speedIsoText.length > 0 ? speedIsoText.join(' · ') : '-'; }
 
-            // Resetear estado de toggle al cambiar de foto
-            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
-            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
-            if (metadataToggle) { metadataToggle.classList.remove('open'); }
-            if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
-            if (metaTechnical) { metaTechnical.classList.remove('open'); }
-
-            // VARIANTE 1: Sin título pero con datos técnicos
+            // Caso 5: Solo datos técnicos (sin título/descripción/ubicación)
             if (!hasTitle && !hasDescription && !hasLocation && hasTechData) {
                 metadataPanel.classList.add('no-title');
-                metadataPanel.classList.remove('open');
-                if (metadataToggle) { metadataToggle.classList.add('hidden'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.remove('hidden'); }
+                if (metadataToggle) { metadataToggle.classList.remove('hidden'); }
             }
-            // VARIANTE 2: Con título/descripción/ubicación
+            // Casos 2/3/4: Con título/descripción/ubicación
             else {
                 metadataPanel.classList.remove('no-title');
-                if (metadataToggleFloating) { metadataToggleFloating.classList.add('hidden'); }
-                // Si no hay datos técnicos, ocultar el toggle "Ver más"
                 if (metadataToggle) {
                     if (hasTechData) {
                         metadataToggle.classList.remove('hidden');
@@ -997,6 +1044,46 @@
                         metadataToggle.classList.add('hidden');
                     }
                 }
+            }
+
+            // Aplicar estado inicial sin animación
+            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
+            if (metaTechnical) { metaTechnical.style.transition = 'none'; }
+            if (modalContentWrapper) { modalContentWrapper.style.transition = 'none'; }
+            if (exifPreference && hasTechData) {
+                if (metaTechnical) { metaTechnical.classList.add('open'); }
+                if (metadataToggle) { metadataToggle.classList.add('open'); }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ocultar metadatos'; }
+                applyExifOffset(true);
+            } else {
+                if (metaTechnical) { metaTechnical.classList.remove('open'); }
+                if (metadataToggle) { metadataToggle.classList.remove('open'); }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
+                applyExifOffset(false);
+            }
+            // Restaurar transiciones tras el primer frame
+            requestAnimationFrame(function() {
+                if (metaTechnical) { metaTechnical.style.transition = ''; }
+                if (modalContentWrapper) { modalContentWrapper.style.transition = ''; }
+            });
+
+            // Ajustar ancho del panel al ancho renderizado de la foto
+            requestAnimationFrame(syncPanelWidth);
+            // Si la imagen aún no ha cargado, recalcular cuando lo haga
+            if (imgZoom && !imgZoom.naturalWidth) {
+                imgZoom.addEventListener('load', function() {
+                    requestAnimationFrame(syncPanelWidth);
+                }, { once: true });
+            }
+        }
+
+        function applyExifOffset(open) {
+            if (!modalContentWrapper) { return; }
+            if (open && metaTechnical) {
+                var offset = Math.round(metaTechnical.offsetHeight / 2);
+                modalContentWrapper.style.transform = 'translateY(-' + offset + 'px)';
+            } else {
+                modalContentWrapper.style.transform = '';
             }
         }
 
@@ -1007,21 +1094,17 @@
             var isOpen = metaTechnical.classList.contains('open');
             var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
             if (isOpen) {
+                exifPreference = false;
                 metaTechnical.classList.remove('open');
                 if (metadataToggle) { metadataToggle.classList.remove('open'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.remove('open'); }
-                if (metadataPanel && metadataPanel.classList.contains('no-title')) {
-                    metadataPanel.classList.remove('open');
-                }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver más'; }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
+                applyExifOffset(false);
             } else {
+                exifPreference = true;
+                applyExifOffset(true);
                 metaTechnical.classList.add('open');
                 if (metadataToggle) { metadataToggle.classList.add('open'); }
-                if (metadataToggleFloating) { metadataToggleFloating.classList.add('open'); }
-                if (metadataPanel && metadataPanel.classList.contains('no-title')) {
-                    metadataPanel.classList.add('open');
-                }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ver menos'; }
+                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ocultar metadatos'; }
             }
         };
 
@@ -1039,9 +1122,60 @@
             updateMetadataPanel();
         };
 
+        // Recalcular ancho del panel en resize
+        window.addEventListener('resize', syncPanelWidth);
+
         // Nota: la integración zoom ↔ metadata se hace en el click handler
         // existente de imgZoom (sección 4. ZOOM MODAL) que ya añade/quita
         // la clase .zoomed en modalContentWrapper.
+
+        /* ═══════════════════════════════════════════
+           4b. DEEP LINK — compartir foto por URL hash
+               La URL cambia a #nombre-foto.avif al abrir
+               un modal, y se limpia al cerrar.
+               Cargar la página con ese hash abre la foto.
+        ═══════════════════════════════════════════ */
+
+        function _hashFilename(src) {
+            return src ? src.split('/').pop().split('?')[0] : '';
+        }
+
+        function _setHash(src) {
+            var filename = _hashFilename(src);
+            var base = location.pathname + location.search;
+            history.replaceState(null, '', filename ? base + '#' + filename : base);
+        }
+
+        // Envolver openZoom → actualizar hash
+        var _origOpenZoomHash = window.openZoom;
+        window.openZoom = function (src) {
+            _origOpenZoomHash(src);
+            _setHash(src);
+        };
+
+        // Envolver changeModalImage → actualizar hash al navegar
+        var _origChangeHash = window.changeModalImage;
+        window.changeModalImage = function (dir, event) {
+            _origChangeHash(dir, event);
+            if (imgZoom) { _setHash(imgZoom.src); }
+        };
+
+        // Envolver closeZoom → limpiar hash
+        var _origCloseZoomHash = window.closeZoom;
+        window.closeZoom = function () {
+            _origCloseZoomHash();
+            _setHash(null);
+        };
+
+        // Al cargar la página: si hay hash, abrir la foto correspondiente
+        (function () {
+            var hash = decodeURIComponent(location.hash.slice(1));
+            if (!hash || !slides.length) { return; }
+            var target = Array.from(slides).find(function (img) {
+                return _hashFilename(img.src) === hash;
+            });
+            if (target) { window.openZoom(target.src); }
+        })();
 
         /* ═══════════════════════════════════════════
            5. SCROLL TO TOP

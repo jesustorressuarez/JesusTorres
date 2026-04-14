@@ -288,15 +288,28 @@
         </div>
 
         <div id="zoomModal" class="modal">
-            <span class="close-btn" onclick="closeZoom()">&times;</span>
 
-            <button class="modal-nav prev-modal" onclick="changeModalImage(-1, event)">
-                <span class="chevron"></span>
-            </button>
+            <!-- Barra de navegación del modal -->
+            <div class="modal-nav-menu">
+                <div class="modal-nav-menu__nav-group">
+                    <button class="modal-nav-menu__btn modal-nav prev-modal" onclick="changeModalImage(-1, event)">Previo</button><span class="modal-nav-menu__slash">-</span><button class="modal-nav-menu__btn modal-nav next-modal" onclick="changeModalImage(1, event)">Siguiente</button>
+                </div>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn metadata-toggle" id="metadataToggle" onclick="window.toggleMetadata(event)">
+                    <span class="metadata-toggle-text">Mostrar metadatos</span>
+                </button>
+                <span class="modal-nav-menu__sep">|</span>
+                <button class="modal-nav-menu__btn" onclick="closeZoom()">Cerrar</button>
+            </div>
 
             <div class="modal-content-wrapper" id="modalContentWrapper">
                 <div class="zoom-wrapper" id="zoomWrapper">
                     <img id="imgZoom" src="" alt="Vista ampliada">
+
+                    <div class="zoom-minimap" id="zoomMinimap">
+                        <img id="minimapImg" src="" alt="">
+                        <div class="zoom-minimap-viewport" id="minimapViewport"></div>
+                    </div>
                 </div>
 
                 <div class="metadata-panel" id="metadataPanel">
@@ -306,12 +319,6 @@
                                 <span class="metadata-title" id="metaTitle"></span>
                                 <span class="metadata-date-location" id="metaDateLocation"></span>
                             </div>
-                            <button class="metadata-toggle" id="metadataToggle" onclick="window.toggleMetadata(event)">
-                                <span class="metadata-toggle-text">Ver más</span>
-                                <svg class="metadata-chevron" width="14" height="7" viewBox="0 0 14 7" fill="none">
-                                    <path d="M1 1L7 6L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
                         </div>
                         <p class="metadata-description" id="metaDescription"></p>
                     </div>
@@ -335,17 +342,8 @@
                     </div>
                 </div>
 
-                <button class="metadata-toggle-floating" id="metadataToggleFloating" onclick="window.toggleMetadata(event)">
-                    <span class="metadata-toggle-text">Ver más</span>
-                    <svg class="metadata-chevron" width="14" height="7" viewBox="0 0 14 7" fill="none">
-                        <path d="M1 1L7 6L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+                </div>
 
-            <button class="modal-nav next-modal" onclick="changeModalImage(1, event)">
-                <span class="chevron"></span>
-            </button>
         </div>
     </section>
 
@@ -475,10 +473,9 @@
     <!-- METADATA OBJECT FOR PHOTO VIEWER -->
     <script>
         window.photoMetadata = {
-            "../../assets/img/favoritas/IMG_0684.avif": {"date":"2023:09:11 04:51:46","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/160s","iso":"100"},
-            "../../assets/img/favoritas/IMG_0685.avif": {"date":"2023:09:11 04:51:49","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"96.0","aperture":"5.0","speed":"1/160s","iso":"100"},
-            "../../assets/img/favoritas/IMG_0713.avif": {"date":"2023:09:11 05:33:37","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"8.0","speed":"1/160s","iso":"100"},
-            "../../assets/img/favoritas/IMG_0800 (1).avif": {"date":"2023:09:11 06:05:31","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"100"},
+            "../../assets/img/favoritas/IMG_0685.avif": {"title":"Templo dorado"},
+            "../../assets/img/favoritas/IMG_0713.avif": {"title":"Amanecer en Bagan","date":"2023:09:11 05:33:37","location":"Bagan, Myanmar","description":"La niebla matinal envuelve las pagodas milenarias del valle de Bagan."},
+            "../../assets/img/favoritas/IMG_0800 (1).avif": {"title":"Mercado flotante","date":"2023:09:11 06:05:31","location":"Bangkok, Tailandia","description":"Comerciantes locales en el mercado flotante de Damnoen Saduak.","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"100"},
             "../../assets/img/favoritas/IMG_0973.avif": {"date":"2023:09:13 05:55:18","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"11.0","speed":"1/100s","iso":"200"},
             "../../assets/img/favoritas/IMG_0985.avif": {"date":"2023:09:13 09:25:50","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"55.0","aperture":"4.0","speed":"1/200s","iso":"100"},
             "../../assets/img/favoritas/IMG_1426.avif": {"date":"2023:09:14 03:26:38","camera":"Canon EOS 2000D","lens":"EF-S55-250mm f/4-5.6 IS II","focal":"250.0","aperture":"5.6","speed":"1/60s","iso":"400"},
