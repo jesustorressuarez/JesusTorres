@@ -16,6 +16,13 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
+        // Medir el ancho del scrollbar antes de cualquier cambio y guardarlo como variable CSS
+        // Esto permite que .lenis-stopped compense el espacio sin desplazamiento visible
+        (function () {
+            var sbw = window.innerWidth - document.documentElement.clientWidth;
+            document.documentElement.style.setProperty('--scrollbar-w', sbw + 'px');
+        })();
+
         // Scroll suave para enlaces internos (requiere Lenis global)
         if (typeof lenis !== 'undefined') {
             document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
@@ -237,26 +244,12 @@
         }
 
         /* ═══════════════════════════════════════════
-           4. CARROUSEL + ZOOM MODAL
+           4. CARROUSEL
         ═══════════════════════════════════════════ */
 
         var track = document.getElementById('track');
         var dotsContainer = document.getElementById('dots-container');
         var slides = document.querySelectorAll('.slide img');
-        var modal = document.getElementById('zoomModal');
-        var imgZoom = document.getElementById('imgZoom');
-        var zoomWrapper = document.getElementById('zoomWrapper');
-
-        var currentIdx = 0;
-        var isZoomed = false;
-        var ZOOM_SCALE = 2.5;
-        var baseImgW = 0;
-        var baseImgH = 0;
-
-        // --- Minimap ---
-        var zoomMinimap = document.getElementById('zoomMinimap');
-        var minimapImg = document.getElementById('minimapImg');
-        var minimapViewport = document.getElementById('minimapViewport');
 
         // --- Dots del carousel ---
         if (track && dotsContainer) {
@@ -272,7 +265,6 @@
 
             track.addEventListener('scroll', function () {
                 var index = Math.round(track.scrollLeft / track.offsetWidth);
-                // Si estamos al final del scroll, activar el último dot
                 if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 2) {
                     index = slides.length - 1;
                 }
@@ -283,147 +275,8 @@
             });
         }
 
-        // --- Funciones de Zoom ---
-
-        function resetZoom() {
-            isZoomed = false;
-            if (imgZoom) {
-                imgZoom.style.transform = '';
-                imgZoom.classList.remove('active-zoom');
-            }
-            baseImgW = 0;
-            baseImgH = 0;
-            hideMinimap();
-        }
-
-        function showMinimap(src) {
-            if (!zoomMinimap || !minimapImg) { return; }
-            minimapImg.src = src;
-            zoomMinimap.classList.add('active');
-        }
-
-        function hideMinimap() {
-            if (!zoomMinimap) { return; }
-            zoomMinimap.classList.remove('active');
-        }
-
-        function updateMinimapViewport(tx, ty) {
-            if (!zoomMinimap || !minimapViewport || !minimapImg || !zoomWrapper || !baseImgW || !baseImgH) { return; }
-            var mw = minimapImg.offsetWidth;
-            var mh = minimapImg.offsetHeight;
-            if (!mw || !mh) { return; }
-
-            var wr = zoomWrapper.getBoundingClientRect();
-
-            // Tamaño del viewport: qué fracción de la imagen escalada es visible
-            var vpW = Math.min(mw, mw * wr.width / (baseImgW * ZOOM_SCALE));
-            var vpH = Math.min(mh, mh * wr.height / (baseImgH * ZOOM_SCALE));
-
-            // Posición: el translate(tx,ty) desplaza la imagen escalada.
-            // En coords de imagen original el desplazamiento es tx/ZOOM_SCALE.
-            // Mapeado al minimap: tx * mw / (ZOOM_SCALE * baseImgW).
-            var left = mw / 2 - vpW / 2 - tx * mw / (ZOOM_SCALE * baseImgW);
-            var top  = mh / 2 - vpH / 2 - ty * mh / (ZOOM_SCALE * baseImgH);
-
-            // Clampar dentro del minimap
-            left = Math.max(0, Math.min(mw - vpW, left));
-            top  = Math.max(0, Math.min(mh - vpH, top));
-
-            minimapViewport.style.width  = vpW + 'px';
-            minimapViewport.style.height = vpH + 'px';
-            minimapViewport.style.left   = left + 'px';
-            minimapViewport.style.top    = top + 'px';
-        }
-
-        function cacheBaseDimensions() {
-            if (imgZoom && zoomWrapper) {
-                var wr = zoomWrapper.getBoundingClientRect();
-                var iW = imgZoom.naturalWidth;
-                var iH = imgZoom.naturalHeight;
-                if (iW && iH) {
-                    // Calcular dimensiones reales renderizadas con object-fit: contain
-                    var wrapRatio = wr.width / wr.height;
-                    var imgRatio = iW / iH;
-                    if (imgRatio > wrapRatio) {
-                        baseImgW = wr.width;
-                        baseImgH = wr.width / imgRatio;
-                    } else {
-                        baseImgH = wr.height;
-                        baseImgW = wr.height * imgRatio;
-                    }
-                } else {
-                    baseImgW = imgZoom.offsetWidth;
-                    baseImgH = imgZoom.offsetHeight;
-                }
-            }
-        }
-
-        function applyPan(e) {
-            if (!zoomWrapper || !imgZoom) { return; }
-            var wr = zoomWrapper.getBoundingClientRect();
-            var scaledW = baseImgW * ZOOM_SCALE;
-            var scaledH = baseImgH * ZOOM_SCALE;
-            var overflowX = Math.max(0, (scaledW - wr.width) / 2);
-            var overflowY = Math.max(0, (scaledH - wr.height) / 2);
-            var mx = ((e.clientX - wr.left) / wr.width) * 2 - 1;
-            var my = ((e.clientY - wr.top) / wr.height) * 2 - 1;
-            var tx = -mx * overflowX;
-            var ty = -my * overflowY;
-            imgZoom.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + ZOOM_SCALE + ')';
-            updateMinimapViewport(tx, ty);
-        }
-
-        // --- Contador de diapositivas en modal (solo proyectos, no galerías de fotos) ---
-        var isGalleryCarousel = track && track.classList.contains('is-gallery');
-        var modalCounter = null;
-        if (modal && slides.length > 1 && !isGalleryCarousel) {
-            modalCounter = document.createElement('span');
-            modalCounter.classList.add('modal-slide-counter');
-            modal.appendChild(modalCounter);
-        }
-
-        function updateModalCounter() {
-            if (modalCounter) {
-                modalCounter.textContent = (currentIdx + 1) + ' / ' + slides.length;
-            }
-        }
-
-        // --- Abrir / Cerrar Modal ---
-
-        window.openZoom = function (src) {
-            if (!modal || !imgZoom || !slides.length) { return; }
-            currentIdx = Array.from(slides).findIndex(function (img) { return img.src === src; });
-            imgZoom.src = src;
-            modal.style.display = 'flex';
-            document.body.classList.add('modal-open');
-            document.body.style.touchAction = 'none';
-            if (typeof lenis !== 'undefined') { lenis.stop(); }
-            // Marcar modo galería para ocultar flechas en mobile
-            if (isGalleryCarousel) {
-                modal.classList.add('gallery-mode');
-            } else {
-                modal.classList.remove('gallery-mode');
-            }
-            resetZoom();
-            updateModalNavButtons();
-            updateModalCounter();
-        };
-
-        window.closeZoom = function () {
-            if (!modal) { return; }
-            modal.style.display = 'none';
-            document.body.classList.remove('modal-open');
-            document.body.style.touchAction = '';
-            if (typeof lenis !== 'undefined') { lenis.start(); }
-            resetZoom();
-            if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
-            if (metaTechnical) { metaTechnical.classList.remove('open'); }
-            if (metadataToggle) { metadataToggle.classList.remove('open'); }
-            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
-            for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
-        };
-
         // --- Carrusel sin bucle (solo proyectos, no galerías de fotos) ---
+        var isGalleryCarousel = track && track.classList.contains('is-gallery');
 
         function updateNavButtons() {
             if (!track || isGalleryCarousel) { return; }
@@ -441,73 +294,409 @@
 
         if (track && !isGalleryCarousel) {
             track.addEventListener('scroll', updateNavButtons);
-            // Estado inicial
             setTimeout(updateNavButtons, 100);
         }
 
         window.moveSlide = function (dir) {
-            if (track) {
-                track.scrollBy({ left: track.offsetWidth * dir, behavior: 'smooth' });
+            if (!track || slides.length === 0) { return; }
+            // Encontrar el índice actual comparando scrollLeft con el offsetLeft de cada slide
+            var currentIndex = 0;
+            var minDist = Infinity;
+            for (var i = 0; i < slides.length; i++) {
+                var dist = Math.abs(slides[i].offsetLeft - track.scrollLeft);
+                if (dist < minDist) { minDist = dist; currentIndex = i; }
             }
+            var newIndex = Math.max(0, Math.min(slides.length - 1, currentIndex + dir));
+            // Usar offsetLeft exacto del slide destino (igual que los dots), evitando el problema del gap
+            track.scrollTo({ left: slides[newIndex].offsetLeft, behavior: 'smooth' });
         };
 
-        window.changeModalImage = function (dir, event) {
-            if (event) { event.stopPropagation(); }
-            if (!slides.length || !imgZoom) { return; }
-            var newIdx = currentIdx + dir;
-            // Sin bucle: clampar en los extremos
-            if (newIdx < 0 || newIdx >= slides.length) { return; }
-            currentIdx = newIdx;
-            imgZoom.src = slides[currentIdx].src;
-            resetZoom();
-            updateModalNavButtons();
-            updateModalCounter();
-        };
+        // Teclado: mover carrusel de proyecto (sin modal abierto)
+        document.addEventListener('keydown', function (e) {
+            var modal = document.getElementById('modal');
+            if (modal && modal.classList.contains('open')) { return; }
+            if (track && !isGalleryCarousel) {
+                if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); window.moveSlide(-1); }
+            }
+        });
 
-        function updateModalNavButtons() {
-            var prevBtn = document.querySelector('.modal-nav.prev-modal');
-            var nextBtn = document.querySelector('.modal-nav.next-modal');
-            if (prevBtn) {
-                prevBtn.style.opacity = currentIdx <= 0 ? '0.25' : '';
-                prevBtn.style.pointerEvents = currentIdx <= 0 ? 'none' : '';
-            }
-            if (nextBtn) {
-                nextBtn.style.opacity = currentIdx >= slides.length - 1 ? '0.25' : '';
-                nextBtn.style.pointerEvents = currentIdx >= slides.length - 1 ? 'none' : '';
-            }
+
+        /* ═══════════════════════════════════════════
+           4b. MODAL ZOOM — NUEVO
+        ═══════════════════════════════════════════ */
+
+        var modal      = document.getElementById('modal');
+        var photo      = document.getElementById('photo');
+        var photoArea  = document.getElementById('photoArea');
+        var wrapper    = document.getElementById('wrapper');
+        var metaPanel  = document.getElementById('metaPanel');
+        var btnMeta    = document.getElementById('btnMeta');
+        var btnPrev    = document.getElementById('btnPrev');
+        var btnNext    = document.getElementById('btnNext');
+        var counterEl  = document.getElementById('counter');
+        var minimap    = document.getElementById('minimap');
+        var minimapImg = document.getElementById('minimapImg');
+        var minimapVp  = document.getElementById('minimapVp');
+        var counterInline = document.getElementById('counterInline');
+        var titlePanel = document.getElementById('titlePanel');
+
+        var currentIdx    = 0;
+        var metaPreference = true;
+        var metaVisible   = false;
+        var isZoomed      = false;
+        var ZOOM_SCALE    = 2.5;
+        var baseImgW      = 0;
+        var baseImgH      = 0;
+
+        /* ── Formatea fecha EXIF "YYYY:MM:DD HH:MM:SS" → "DD/MM/AA" ── */
+        function formatExifDate(raw) {
+            if (!raw) { return raw; }
+            var m = raw.match(/^(\d{4}):(\d{2}):(\d{2})/);
+            if (!m) { return raw; }
+            return m[3] + '/' + m[2] + '/' + m[1].slice(2);
         }
 
-        // --- Event listeners del Modal ---
-
-        if (modal) {
-            modal.addEventListener('click', function (e) {
-                if (e.target === modal || e.target === zoomWrapper) {
-                    window.closeZoom();
+        /* ── Construir array de imágenes desde los slides del carousel ── */
+        function buildImageData() {
+            var images = [];
+            for (var i = 0; i < slides.length; i++) {
+                var src = slides[i].src;
+                var data = { src: src };
+                // Buscar metadata si existe window.photoMetadata
+                if (window.photoMetadata) {
+                    var decodedSrc = decodeURIComponent(src);
+                    var metaKeys = Object.keys(window.photoMetadata);
+                    for (var k = 0; k < metaKeys.length; k++) {
+                        var normalizedKey = metaKeys[k].replace(/^\.\.\/\.\.\//,'');
+                        if (decodedSrc.indexOf(normalizedKey) !== -1) {
+                            var meta = window.photoMetadata[metaKeys[k]];
+                            if (meta.title)       data.title = meta.title;
+                            if (meta.description) data.desc = meta.description;
+                            if (meta.date)        data.date = formatExifDate(meta.date);
+                            if (meta.location)    data.location = meta.location;
+                            if (meta.camera || meta.lens || meta.focal || meta.aperture) {
+                                data.exif = {
+                                    camera: meta.camera || '-',
+                                    lens: meta.lens || '-',
+                                    focal: (meta.focal || '-') + ' · ' + (meta.aperture || '-'),
+                                    speed: (meta.speed || '-') + ' · ISO ' + (meta.iso || '-')
+                                };
+                            }
+                            break;
+                        }
+                    }
                 }
+                images.push(data);
+            }
+            return images;
+        }
+
+        /* ══════════════════════════════════════
+           NAVEGACIÓN
+        ══════════════════════════════════════ */
+
+        function showImage(idx) {
+            if (!modal || !photo) { return; }
+            var images = buildImageData();
+            if (!images.length) { return; }
+            currentIdx = idx;
+            resetZoom();
+            if (photoArea) { photoArea.style.flex = ''; }
+            photo.style.maxHeight = '';
+
+            var data = images[idx];
+            photo.src = data.src;
+
+            /* ── Panel título ── */
+            if (titlePanel) {
+                var hasTitle = data.title || data.desc;
+                var hasDateLoc = data.date || data.location;
+                var showTitle = !!(data.title || data.desc || data.location);
+
+                if (showTitle) {
+                    titlePanel.style.display = '';
+                    var leftHTML = '';
+                    if (data.title) leftHTML += '<span class="title-name">' + data.title + '</span>';
+                    if (data.desc)  leftHTML += '<span class="title-desc">' + data.desc + '</span>';
+                    titlePanel.querySelector('.title-left').innerHTML = leftHTML;
+
+                    var rightParts = [];
+                    if (data.date)     rightParts.push(data.date);
+                    if (data.location) rightParts.push(data.location);
+                    titlePanel.querySelector('.title-right').textContent = rightParts.join(' | ');
+                } else {
+                    titlePanel.style.display = 'none';
+                }
+            }
+
+            /* ── Panel metadatos + botón ── */
+            var hasExif = !!data.exif;
+            if (btnMeta && metaPanel) {
+                if (hasExif) {
+                    btnMeta.disabled = false;
+                    var exifHTML =
+                        '<div><span class="meta-label">Cámara</span><span>' + data.exif.camera + '</span></div>' +
+                        '<div><span class="meta-label">Objetivo</span><span>' + data.exif.lens + '</span></div>' +
+                        '<div><span class="meta-label">Focal · Apertura</span><span>' + data.exif.focal + '</span></div>' +
+                        '<div><span class="meta-label">VEL · ISO</span><span>' + data.exif.speed + '</span></div>';
+                    metaPanel.querySelector('.modal-meta-exif').innerHTML = exifHTML;
+                    metaVisible = metaPreference;
+                    if (metaVisible) {
+                        metaPanel.classList.add('visible');
+                        btnMeta.textContent = 'Ocultar metadatos';
+                    } else {
+                        metaPanel.classList.remove('visible');
+                        btnMeta.textContent = 'Mostrar metadatos';
+                    }
+                } else {
+                    btnMeta.disabled = true;
+                    btnMeta.textContent = 'Mostrar metadatos';
+                    metaVisible = false;
+                    metaPanel.classList.remove('visible');
+                }
+            }
+
+            updateModalNavButtons();
+            updateModalCounter();
+        }
+
+        if (photo) {
+            photo.addEventListener('load', function () {
+                syncLayout();
             });
         }
 
-        if (imgZoom) {
-            imgZoom.addEventListener('click', function (e) {
+        function updateModalNavButtons() {
+            if (btnPrev) { btnPrev.disabled = currentIdx <= 0; }
+            if (btnNext) { btnNext.disabled = currentIdx >= slides.length - 1; }
+        }
+
+        function updateModalCounter() {
+            var n = (currentIdx + 1) + ' / ' + slides.length;
+            if (counterEl) { counterEl.textContent = n; }
+            if (counterInline) { counterInline.textContent = '(' + (currentIdx + 1) + '/' + slides.length + ')'; }
+        }
+
+        window.openZoomPortada = function (src) {
+            if (!modal || !photo) { return; }
+            resetZoom();
+            if (titlePanel) { titlePanel.style.display = 'none'; }
+            if (metaPanel)  { metaPanel.classList.remove('visible'); metaPanel.style.width = ''; }
+            if (photoArea)  { photoArea.style.flex = ''; }
+            photo.style.maxHeight = '';
+            photo.src = src;
+            modal.classList.add('open', 'standalone');
+            document.body.classList.add('modal-open');
+            document.body.style.touchAction = 'none';
+            if (typeof lenis !== 'undefined') { lenis.stop(); }
+        };
+
+        window.openZoom = function (src) {
+            if (!modal || !photo || !slides.length) { return; }
+            currentIdx = Array.from(slides).findIndex(function (img) { return img.src === src; });
+            if (currentIdx < 0) { currentIdx = 0; }
+            modal.classList.add('open');
+            document.body.classList.add('modal-open');
+            document.body.style.touchAction = 'none';
+            if (typeof lenis !== 'undefined') { lenis.stop(); }
+            showImage(currentIdx);
+        };
+
+        window.closeZoom = function () {
+            if (!modal) { return; }
+            modal.classList.remove('open', 'standalone');
+            document.body.classList.remove('modal-open');
+            document.body.style.touchAction = '';
+            if (typeof lenis !== 'undefined') { lenis.start(); }
+            resetZoom();
+        };
+
+        window.changeModalImage = function (dir) {
+            var newIdx = currentIdx + dir;
+            if (newIdx < 0 || newIdx >= slides.length) { return; }
+            showImage(newIdx);
+        };
+
+
+        /* ══════════════════════════════════════
+           METADATOS
+        ══════════════════════════════════════ */
+
+        /* ── Acorta el objetivo si su texto ocupa más de una línea ── */
+        function shortenLensIfWraps() {
+            if (!metaPanel) { return; }
+            var exifEl = metaPanel.querySelector('.modal-meta-exif');
+            if (!exifEl) { return; }
+            var divs = exifEl.querySelectorAll('div');
+            for (var i = 0; i < divs.length; i++) {
+                var spans = divs[i].querySelectorAll('span');
+                if (spans.length < 2) { continue; }
+                if (spans[0].textContent !== 'Objetivo') { continue; }
+                var valueSpan = spans[1];
+                var lh = parseFloat(getComputedStyle(valueSpan).lineHeight);
+                if (valueSpan.offsetHeight > lh * 1.5) {
+                    var m = valueSpan.textContent.match(/(\d+mm\s+f\/[\d.]+(?:-[\d.]+)?)/);
+                    if (m) { valueSpan.textContent = m[1]; }
+                }
+                break;
+            }
+        }
+
+        window.toggleMeta = function () {
+            if (!btnMeta || btnMeta.disabled) { return; }
+            metaPreference = !metaPreference;
+            metaVisible = metaPreference;
+            if (metaVisible) {
+                metaPanel.classList.add('visible');
+                btnMeta.textContent = 'Ocultar metadatos';
+            } else {
+                metaPanel.classList.remove('visible');
+                btnMeta.textContent = 'Mostrar metadatos';
+            }
+            requestAnimationFrame(function () {
+                syncLayout();
+                if (metaVisible) { shortenLensIfWraps(); }
+            });
+        };
+
+        function syncLayout() {
+            if (!photo || !photo.naturalWidth || !photoArea) { return; }
+
+            /* Ocultar paneles ANTES de cualquier reset de ancho.
+               Como todo ocurre síncronamente, el navegador solo renderiza
+               el estado final — el usuario nunca ve el ancho al 100%. */
+            if (titlePanel) { titlePanel.style.visibility = 'hidden'; }
+            if (metaPanel)  { metaPanel.style.visibility  = 'hidden'; }
+
+            /* 1. Resetear para medir con flex:1 limpio */
+            photoArea.style.flex = '';
+            photo.style.maxHeight = '';
+            if (titlePanel) { titlePanel.style.width = ''; }
+            if (metaPanel)  { metaPanel.style.width  = ''; }
+            void photoArea.offsetHeight;
+
+            /* 2. Capturar la altura disponible (photoArea en flex:1) */
+            var availH = photoArea.clientHeight;
+
+            /* 3. Fijar max-height en px en el img y encoger photoArea */
+            photo.style.maxHeight = availH + 'px';
+            photoArea.style.flex = '0 0 auto';
+            void photoArea.offsetHeight;
+
+            /* 4. Leer el ancho renderizado real */
+            var w = photo.offsetWidth;
+
+            /* 5. Título y panel metadatos = mismo ancho que la foto */
+            if (w > 0) {
+                if (titlePanel && titlePanel.style.display !== 'none') { titlePanel.style.width = w + 'px'; }
+                if (metaVisible && metaPanel) {
+                    metaPanel.style.width = w + 'px';
+                    shortenLensIfWraps();
+                }
+            }
+
+            /* 6. Restaurar visibilidad — todo ha ocurrido en el mismo frame */
+            if (titlePanel) { titlePanel.style.visibility = ''; }
+            if (metaPanel)  { metaPanel.style.visibility  = ''; }
+        }
+
+        /* ══════════════════════════════════════
+           ZOOM
+        ══════════════════════════════════════ */
+
+        function cacheBaseDimensions() {
+            if (photo) {
+                baseImgW = photo.offsetWidth;
+                baseImgH = photo.offsetHeight;
+            }
+        }
+
+        function resetZoom() {
+            isZoomed = false;
+            if (photo) {
+                photo.style.transform = '';
+                photo.classList.remove('zoomed');
+            }
+            if (wrapper) { wrapper.classList.remove('is-zoomed'); }
+            baseImgW = 0;
+            baseImgH = 0;
+            hideMinimap();
+        }
+
+        function applyPan(e) {
+            if (!baseImgW || !baseImgH || !photoArea) { return; }
+            var area = photoArea.getBoundingClientRect();
+            var scaledW = baseImgW * ZOOM_SCALE;
+            var scaledH = baseImgH * ZOOM_SCALE;
+            var overflowX = Math.max(0, (scaledW - area.width) / 2);
+            var overflowY = Math.max(0, (scaledH - area.height) / 2);
+            var mx = ((e.clientX - area.left) / area.width) * 2 - 1;
+            var my = ((e.clientY - area.top) / area.height) * 2 - 1;
+            mx = Math.max(-1, Math.min(1, mx));
+            my = Math.max(-1, Math.min(1, my));
+            var tx = -mx * overflowX;
+            var ty = -my * overflowY;
+            photo.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + ZOOM_SCALE + ')';
+            updateMinimap(tx, ty);
+        }
+
+        /* ── Minimap ── */
+
+        function showMinimap(src) {
+            if (!minimapImg || !minimap) { return; }
+            minimapImg.src = src;
+            minimap.classList.add('active');
+        }
+        function hideMinimap() {
+            if (!minimap) { return; }
+            minimap.classList.remove('active');
+        }
+
+        function updateMinimap(tx, ty) {
+            if (!minimap || !minimap.classList.contains('active')) { return; }
+            var mw = minimapImg.offsetWidth;
+            var mh = minimapImg.offsetHeight;
+            if (!mw || !mh || !baseImgW || !baseImgH) { return; }
+            var area = photoArea.getBoundingClientRect();
+            var vpW = Math.min(mw, mw * area.width / (baseImgW * ZOOM_SCALE));
+            var vpH = Math.min(mh, mh * area.height / (baseImgH * ZOOM_SCALE));
+            var left = mw / 2 - vpW / 2 - tx * mw / (ZOOM_SCALE * baseImgW);
+            var top  = mh / 2 - vpH / 2 - ty * mh / (ZOOM_SCALE * baseImgH);
+            left = Math.max(0, Math.min(mw - vpW, left));
+            top  = Math.max(0, Math.min(mh - vpH, top));
+            if (minimapVp) {
+                minimapVp.style.width  = vpW + 'px';
+                minimapVp.style.height = vpH + 'px';
+                minimapVp.style.left   = left + 'px';
+                minimapVp.style.top    = top + 'px';
+            }
+        }
+
+        /* ── Events ── */
+
+        if (photo) {
+            photo.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if (!isZoomed) {
                     cacheBaseDimensions();
+                    if (photoArea) { photoArea.style.flex = ''; }
+                    photo.style.maxHeight = '';
                     isZoomed = true;
-                    imgZoom.classList.add('active-zoom');
-                    showMinimap(imgZoom.src);
+                    photo.classList.add('zoomed');
+                    if (wrapper) { wrapper.classList.add('is-zoomed'); }
+                    showMinimap(photo.src);
                     applyPan(e);
-                    if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
                 } else {
                     resetZoom();
-                    if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
+                    syncLayout();
                 }
             });
         }
 
-        // Pan con throttle (mousemove)
-        if (zoomWrapper) {
+        if (photoArea) {
             var ticking = false;
-            zoomWrapper.addEventListener('mousemove', function (e) {
+            photoArea.addEventListener('mousemove', function (e) {
                 if (!isZoomed || ticking) { return; }
                 ticking = true;
                 requestAnimationFrame(function () {
@@ -517,623 +706,29 @@
             });
         }
 
-        // Flash visual en botón de navegación al usar teclado
-        function flashNavBtn(selector) {
-            var btn = document.querySelector(selector);
-            if (!btn) { return; }
-            btn.style.color = '#ffffff';
-            setTimeout(function () { btn.style.color = ''; }, 100);
+        if (modal) {
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal || e.target === wrapper || e.target === photoArea) {
+                    window.closeZoom();
+                }
+            });
         }
 
-        // Teclado: navegar / cerrar modal / mover carrusel
         document.addEventListener('keydown', function (e) {
-            if (modal && modal.style.display === 'flex') {
-                if (e.key === 'Escape') { window.closeZoom(); }
-                if (e.key === 'ArrowRight') { e.preventDefault(); flashNavBtn('.next-modal'); window.changeModalImage(1); }
-                if (e.key === 'ArrowLeft') { e.preventDefault(); flashNavBtn('.prev-modal'); window.changeModalImage(-1); }
-            } else if (track && !isGalleryCarousel) {
-                // Flechas mueven el carrusel de proyecto sin necesidad de foco
-                if (e.key === 'ArrowRight') { e.preventDefault(); window.moveSlide(1); }
-                if (e.key === 'ArrowLeft') { e.preventDefault(); window.moveSlide(-1); }
+            if (!modal || !modal.classList.contains('open')) { return; }
+            if (e.key === 'Escape') { window.closeZoom(); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); window.changeModalImage(1); }
+            if (e.key === 'ArrowLeft')  { e.preventDefault(); window.changeModalImage(-1); }
+        });
+
+        window.addEventListener('resize', function () {
+            if (modal && modal.classList.contains('open') && !isZoomed) {
+                syncLayout();
             }
         });
 
-        /* ── TOUCH: swipe + pinch-to-zoom en modal (estilo galería nativa) ── */
-        if (modal && imgZoom && zoomWrapper) {
-            var tScale = 1;          // escala actual
-            var tPanX = 0;           // traslación actual X
-            var tPanY = 0;           // traslación actual Y
-            var tIsTouchZoomed = false;
-            var SWIPE_THRESHOLD = 50;
-            var MIN_SCALE = 1;
-            var MAX_SCALE = 4;
-            var DOUBLE_TAP_SCALE = 2.5;
-            var RUBBER_BAND = 0.3;   // factor de elasticidad en bordes
-
-            // Estado del gesto
-            var pinchStartDist = 0;
-            var pinchBaseScale = 1;  // escala al inicio del pinch
-            var pinchCenterX = 0;
-            var pinchCenterY = 0;
-            var pinchBasePanX = 0;
-            var pinchBasePanY = 0;
-
-            var panStartX = 0;
-            var panStartY = 0;
-            var panBasePanX = 0;
-            var panBasePanY = 0;
-            var isPanning = false;
-
-            // Inercia
-            var velocityX = 0;
-            var velocityY = 0;
-            var lastMoveTime = 0;
-            var lastMoveX = 0;
-            var lastMoveY = 0;
-            var inertiaRAF = 0;
-
-            function tGetDist(touches) {
-                var dx = touches[0].clientX - touches[1].clientX;
-                var dy = touches[0].clientY - touches[1].clientY;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            function tGetCenter(touches) {
-                return {
-                    x: (touches[0].clientX + touches[1].clientX) / 2,
-                    y: (touches[0].clientY + touches[1].clientY) / 2
-                };
-            }
-
-            /* Calcula los límites de pan para la escala actual */
-            function tGetPanBounds() {
-                var wr = zoomWrapper.getBoundingClientRect();
-                var imgW = imgZoom.naturalWidth;
-                var imgH = imgZoom.naturalHeight;
-                // Tamaño del img element (object-fit: contain)
-                var wrapRatio = wr.width / wr.height;
-                var imgRatio = imgW / imgH;
-                var displayW, displayH;
-                if (imgRatio > wrapRatio) {
-                    displayW = wr.width;
-                    displayH = wr.width / imgRatio;
-                } else {
-                    displayH = wr.height;
-                    displayW = wr.height * imgRatio;
-                }
-                var scaledW = displayW * tScale;
-                var scaledH = displayH * tScale;
-                var maxPanX = Math.max(0, (scaledW - wr.width) / 2);
-                var maxPanY = Math.max(0, (scaledH - wr.height) / 2);
-                return { maxX: maxPanX, maxY: maxPanY };
-            }
-
-            /* Clampa pan a los límites (con o sin rubber-band) */
-            function tClampPan(px, py, rubber) {
-                var b = tGetPanBounds();
-                if (rubber) {
-                    // Efecto elástico: permite pasarse pero con resistencia
-                    if (px > b.maxX) px = b.maxX + (px - b.maxX) * RUBBER_BAND;
-                    else if (px < -b.maxX) px = -b.maxX + (px + b.maxX) * RUBBER_BAND;
-                    if (py > b.maxY) py = b.maxY + (py - b.maxY) * RUBBER_BAND;
-                    else if (py < -b.maxY) py = -b.maxY + (py + b.maxY) * RUBBER_BAND;
-                } else {
-                    px = Math.max(-b.maxX, Math.min(b.maxX, px));
-                    py = Math.max(-b.maxY, Math.min(b.maxY, py));
-                }
-                return { x: px, y: py };
-            }
-
-            function tApply(useTransition) {
-                if (useTransition) {
-                    imgZoom.style.transition = 'transform 0.3s cubic-bezier(.2,.85,.4,1)';
-                } else {
-                    imgZoom.style.transition = 'none';
-                }
-                imgZoom.style.transform = 'translate(' + tPanX + 'px,' + tPanY + 'px) scale(' + tScale + ')';
-                if (tIsTouchZoomed) {
-                    showMinimap(imgZoom.src);
-                    updateMinimapViewport(tPanX, tPanY);
-                }
-            }
-
-            function tResetZoom(animate) {
-                cancelAnimationFrame(inertiaRAF);
-                tScale = 1;
-                tPanX = 0;
-                tPanY = 0;
-                tIsTouchZoomed = false;
-                velocityX = 0;
-                velocityY = 0;
-                if (animate) {
-                    imgZoom.style.transition = 'transform 0.3s cubic-bezier(.2,.85,.4,1)';
-                } else {
-                    imgZoom.style.transition = 'none';
-                }
-                imgZoom.style.transform = '';
-                imgZoom.classList.remove('active-zoom');
-                isZoomed = false;
-                hideMinimap();
-                if (modalContentWrapper) { modalContentWrapper.classList.remove('zoomed'); }
-            }
-
-            /* Snap-back: anima pan a los límites correctos */
-            function tSnapBack() {
-                var clamped = tClampPan(tPanX, tPanY, false);
-                if (Math.abs(clamped.x - tPanX) > 0.5 || Math.abs(clamped.y - tPanY) > 0.5) {
-                    tPanX = clamped.x;
-                    tPanY = clamped.y;
-                    tApply(true);
-                }
-            }
-
-            /* Inercia tras soltar el dedo */
-            function tStartInertia() {
-                cancelAnimationFrame(inertiaRAF);
-                var friction = 0.92;
-                function step() {
-                    if (Math.abs(velocityX) < 0.5 && Math.abs(velocityY) < 0.5) {
-                        tSnapBack();
-                        return;
-                    }
-                    velocityX *= friction;
-                    velocityY *= friction;
-                    var newX = tPanX + velocityX;
-                    var newY = tPanY + velocityY;
-                    // Aplicar rubber-band durante inercia
-                    var b = tGetPanBounds();
-                    if (newX > b.maxX || newX < -b.maxX) { velocityX *= 0.4; }
-                    if (newY > b.maxY || newY < -b.maxY) { velocityY *= 0.4; }
-                    var clamped = tClampPan(newX, newY, true);
-                    tPanX = clamped.x;
-                    tPanY = clamped.y;
-                    tApply(false);
-                    inertiaRAF = requestAnimationFrame(step);
-                }
-                inertiaRAF = requestAnimationFrame(step);
-            }
-
-            /* Zoom al punto concreto (para pinch y double-tap) */
-            function tZoomToPoint(newScale, pointX, pointY, animate) {
-                var wr = zoomWrapper.getBoundingClientRect();
-                // Punto en coords del wrapper (relativo al centro)
-                var cx = pointX - wr.left - wr.width / 2;
-                var cy = pointY - wr.top - wr.height / 2;
-                // Ajustar pan para mantener el punto fijo
-                var ratio = newScale / tScale;
-                var newPanX = cx - ratio * (cx - tPanX);
-                var newPanY = cy - ratio * (cy - tPanY);
-                tScale = newScale;
-                var clamped = tClampPan(newPanX, newPanY, false);
-                tPanX = clamped.x;
-                tPanY = clamped.y;
-                tIsTouchZoomed = tScale > 1.01;
-                if (tIsTouchZoomed) {
-                    imgZoom.classList.add('active-zoom');
-                    isZoomed = true;
-                    if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
-                }
-                tApply(animate);
-            }
-
-            /* ── TOUCHSTART ── */
-            zoomWrapper.addEventListener('touchstart', function (e) {
-                cancelAnimationFrame(inertiaRAF);
-                velocityX = 0;
-                velocityY = 0;
-
-                if (e.touches.length === 2) {
-                    e.preventDefault();
-                    isPanning = false;
-                    pinchStartDist = tGetDist(e.touches);
-                    pinchBaseScale = tScale;
-                    var center = tGetCenter(e.touches);
-                    pinchCenterX = center.x;
-                    pinchCenterY = center.y;
-                    pinchBasePanX = tPanX;
-                    pinchBasePanY = tPanY;
-                } else if (e.touches.length === 1) {
-                    panStartX = e.touches[0].clientX;
-                    panStartY = e.touches[0].clientY;
-                    panBasePanX = tPanX;
-                    panBasePanY = tPanY;
-                    isPanning = false;
-                    lastMoveX = panStartX;
-                    lastMoveY = panStartY;
-                    lastMoveTime = Date.now();
-                }
-            }, { passive: false });
-
-            /* ── TOUCHMOVE ── */
-            zoomWrapper.addEventListener('touchmove', function (e) {
-                if (e.touches.length === 2 && pinchStartDist > 0) {
-                    /* — Pinch zoom — */
-                    e.preventDefault();
-                    var newDist = tGetDist(e.touches);
-                    var ratio = newDist / pinchStartDist;
-                    var newScale = Math.max(MIN_SCALE * 0.5, Math.min(MAX_SCALE, pinchBaseScale * ratio));
-
-                    // Zoom centrado en el punto medio del pinch
-                    var center = tGetCenter(e.touches);
-                    var wr = zoomWrapper.getBoundingClientRect();
-                    var cx = center.x - wr.left - wr.width / 2;
-                    var cy = center.y - wr.top - wr.height / 2;
-                    var scaleRatio = newScale / pinchBaseScale;
-                    var pCx = pinchCenterX - wr.left - wr.width / 2;
-                    var pCy = pinchCenterY - wr.top - wr.height / 2;
-                    tPanX = cx - scaleRatio * (pCx - pinchBasePanX);
-                    tPanY = cy - scaleRatio * (pCy - pinchBasePanY);
-                    tScale = newScale;
-
-                    tIsTouchZoomed = tScale > 1.01;
-                    if (tIsTouchZoomed) {
-                        imgZoom.classList.add('active-zoom');
-                        isZoomed = true;
-                        if (modalContentWrapper) { modalContentWrapper.classList.add('zoomed'); }
-                    }
-                    tApply(false);
-
-                } else if (e.touches.length === 1 && tIsTouchZoomed) {
-                    /* — Pan con un dedo (solo con zoom) — */
-                    e.preventDefault();
-                    isPanning = true;
-                    var dx = e.touches[0].clientX - panStartX;
-                    var dy = e.touches[0].clientY - panStartY;
-                    var newPanX = panBasePanX + dx;
-                    var newPanY = panBasePanY + dy;
-                    // Rubber-band en los bordes
-                    var clamped = tClampPan(newPanX, newPanY, true);
-                    tPanX = clamped.x;
-                    tPanY = clamped.y;
-                    tApply(false);
-
-                    // Tracking de velocidad para inercia
-                    var now = Date.now();
-                    var dt = now - lastMoveTime;
-                    if (dt > 0) {
-                        velocityX = (e.touches[0].clientX - lastMoveX) * (16 / dt);
-                        velocityY = (e.touches[0].clientY - lastMoveY) * (16 / dt);
-                    }
-                    lastMoveX = e.touches[0].clientX;
-                    lastMoveY = e.touches[0].clientY;
-                    lastMoveTime = now;
-                }
-            }, { passive: false });
-
-            /* ── TOUCHEND ── */
-            zoomWrapper.addEventListener('touchend', function (e) {
-                if (e.touches.length === 0) {
-                    pinchStartDist = 0;
-
-                    // Si se redujo por debajo de 1 → snap back a escala 1
-                    if (tScale < 1.01) {
-                        tResetZoom(true);
-                        return;
-                    }
-
-                    // Si estaba haciendo pan con inercia
-                    if (isPanning && tIsTouchZoomed) {
-                        isPanning = false;
-                        tStartInertia();
-                        return;
-                    }
-
-                    // Snap-back después de pinch
-                    if (tIsTouchZoomed) {
-                        tSnapBack();
-                    }
-
-                    // Swipe solo si NO está con zoom
-                    if (!tIsTouchZoomed) {
-                        var endX = e.changedTouches[0].clientX;
-                        var endY = e.changedTouches[0].clientY;
-                        var diffX = endX - panStartX;
-                        var diffY = endY - panStartY;
-                        if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
-                            if (diffX > 0) {
-                                window.changeModalImage(-1);
-                            } else {
-                                window.changeModalImage(1);
-                            }
-                        }
-                    }
-                }
-
-                // Si quedan 1 dedo después de soltar uno (transición pinch → pan)
-                if (e.touches.length === 1) {
-                    panStartX = e.touches[0].clientX;
-                    panStartY = e.touches[0].clientY;
-                    panBasePanX = tPanX;
-                    panBasePanY = tPanY;
-                    pinchStartDist = 0;
-                    lastMoveX = panStartX;
-                    lastMoveY = panStartY;
-                    lastMoveTime = Date.now();
-                    velocityX = 0;
-                    velocityY = 0;
-                }
-            });
-
-            /* ── DOBLE-TAP: zoom al punto tocado / unzoom ── */
-            var lastTap = 0;
-            var lastTapX = 0;
-            var lastTapY = 0;
-            zoomWrapper.addEventListener('touchend', function (e) {
-                if (e.touches.length > 0) { return; }
-                var now = Date.now();
-                var tx = e.changedTouches[0].clientX;
-                var ty = e.changedTouches[0].clientY;
-                if (now - lastTap < 300 && Math.abs(tx - lastTapX) < 30 && Math.abs(ty - lastTapY) < 30) {
-                    e.preventDefault();
-                    if (tIsTouchZoomed) {
-                        tResetZoom(true);
-                    } else {
-                        tZoomToPoint(DOUBLE_TAP_SCALE, tx, ty, true);
-                    }
-                    lastTap = 0;
-                } else {
-                    lastTap = now;
-                    lastTapX = tx;
-                    lastTapY = ty;
-                }
-            });
-
-            // Resetear zoom al cambiar de imagen
-            var origChangeModal = window.changeModalImage;
-            window.changeModalImage = function (dir, event) {
-                tResetZoom(false);
-                origChangeModal(dir, event);
-                updateModalNavButtons();
-            };
-        }
-
         /* ═══════════════════════════════════════════
-           4.5 METADATA PANEL
-        ═══════════════════════════════════════════ */
-
-        var metadataPanel = document.getElementById('metadataPanel');
-        var metadataToggle = document.getElementById('metadataToggle');
-        var metaTechnical = document.getElementById('metaTechnical');
-        var modalContentWrapper = document.getElementById('modalContentWrapper');
-        var exifPreference = true; // metadatos visibles por defecto
-
-        function formatDate(dateStr) {
-            if (!dateStr || dateStr.indexOf(':') === -1) { return dateStr; }
-            var parts = dateStr.split(' ')[0].split(':');
-            if (parts.length < 3) { return dateStr; }
-            var year = parts[0].slice(-2);
-            var month = parts[1].padStart(2, '0');
-            var day = parts[2].padStart(2, '0');
-            return day + '/' + month + '/' + year;
-        }
-
-        function updateLensDisplay() {
-            var el = document.getElementById('metaLens');
-            if (!el || !el.dataset.lensFull) { return; }
-            var full = el.dataset.lensFull;
-            var abbr = el.dataset.lensAbbr || full;
-            if (full === '-' || full === abbr) { el.textContent = full; return; }
-            // Medir ancho natural forzando no-wrap
-            var prevWS = el.style.whiteSpace;
-            el.style.whiteSpace = 'nowrap';
-            el.textContent = full;
-            var natural = el.scrollWidth;
-            var available = el.clientWidth;
-            el.style.whiteSpace = prevWS;
-            el.textContent = (available > 0 && natural > available) ? abbr : full;
-        }
-
-        function syncPanelWidth() {
-            if (!metadataPanel || !imgZoom || !zoomWrapper) { return; }
-            var iW = imgZoom.naturalWidth;
-            var iH = imgZoom.naturalHeight;
-            if (!iW || !iH) { metadataPanel.style.width = ''; return; }
-            var wr = zoomWrapper.getBoundingClientRect();
-            var wrapRatio = wr.width / wr.height;
-            var imgRatio = iW / iH;
-            var renderedW = (imgRatio > wrapRatio) ? wr.width : wr.height * imgRatio;
-            metadataPanel.style.width = Math.round(renderedW) + 'px';
-            updateLensDisplay();
-        }
-
-        function updateMetadataPanel() {
-            if (!metadataPanel) { return; }
-            if (!window.photoMetadata) {
-                metadataPanel.classList.add('hidden');
-                return;
-            }
-
-            var currentSrc = imgZoom ? imgZoom.src : '';
-            if (!currentSrc) {
-                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                return;
-            }
-
-            // Las claves son rutas relativas, imgZoom.src es URL absoluta
-            var metadata = null;
-            var decodedSrc = decodeURIComponent(currentSrc);
-            var metaKeys = Object.keys(window.photoMetadata);
-            for (var k = 0; k < metaKeys.length; k++) {
-                var normalizedKey = metaKeys[k].replace(/^\.\.\/\.\.\//,'');
-                if (decodedSrc.indexOf(normalizedKey) !== -1) {
-                    metadata = window.photoMetadata[metaKeys[k]];
-                    break;
-                }
-            }
-
-            // Si no hay metadata, ocultar todo
-            if (!metadata) {
-                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                return;
-            }
-
-            // Determinar si hay título/descripción
-            var hasTitle = metadata.title && metadata.title.trim() !== '';
-            var hasDescription = metadata.description && metadata.description.trim() !== '';
-            var hasLocation = metadata.location && metadata.location.trim() !== '';
-            var hasTechData = !!(metadata.camera || metadata.lens || metadata.focal || metadata.aperture || metadata.speed || metadata.iso);
-
-            // Si no hay nada, ocultar todo (Caso 1)
-            if (!hasTitle && !hasDescription && !hasLocation && !hasTechData) {
-                if (metadataPanel) { metadataPanel.classList.add('hidden'); }
-                return;
-            }
-
-            // Mostrar panel
-            if (metadataPanel) { metadataPanel.classList.remove('hidden'); }
-
-            // Actualizar información
-            var metaTitle = document.getElementById('metaTitle');
-            var metaDateLocation = document.getElementById('metaDateLocation');
-            var metaDescription = document.getElementById('metaDescription');
-
-            if (metaTitle) {
-                metaTitle.textContent = hasTitle ? metadata.title : '';
-            }
-
-            var dateStr = metadata.date ? formatDate(metadata.date) : '';
-            var dateLocText = [];
-            if (dateStr) { dateLocText.push(dateStr); }
-            if (hasLocation) { dateLocText.push(metadata.location); }
-            if (metaDateLocation) {
-                metaDateLocation.textContent = dateLocText.join(' | ');
-            }
-
-            if (metaDescription) {
-                metaDescription.textContent = hasDescription ? metadata.description : '';
-                metaDescription.style.display = hasDescription ? '' : 'none';
-            }
-
-            // Actualizar datos técnicos
-            var metaCamera = document.getElementById('metaCamera');
-            var metaLens = document.getElementById('metaLens');
-            var metaFocalAperture = document.getElementById('metaFocalAperture');
-            var metaSpeedIso = document.getElementById('metaSpeedIso');
-
-            if (metaCamera) { metaCamera.textContent = metadata.camera || '-'; }
-            if (metaLens) {
-                var lensFullName = metadata.lens || '-';
-                var lensMatch = lensFullName.match(/(\d+mm\s+f\/[\d.\-]+)/i);
-                metaLens.dataset.lensFull = lensFullName;
-                metaLens.dataset.lensAbbr = lensMatch ? lensMatch[1] : lensFullName;
-                metaLens.textContent = lensFullName; // se corregirá en syncPanelWidth
-            }
-
-            var focalApertureText = [];
-            if (metadata.focal) { focalApertureText.push(metadata.focal + 'mm'); }
-            if (metadata.aperture) { focalApertureText.push('f/' + metadata.aperture); }
-            if (metaFocalAperture) { metaFocalAperture.textContent = focalApertureText.length > 0 ? focalApertureText.join(' · ') : '-'; }
-
-            var speedIsoText = [];
-            if (metadata.speed) { speedIsoText.push(metadata.speed); }
-            if (metadata.iso) { speedIsoText.push('ISO ' + metadata.iso); }
-            if (metaSpeedIso) { metaSpeedIso.textContent = speedIsoText.length > 0 ? speedIsoText.join(' · ') : '-'; }
-
-            // Caso 5: Solo datos técnicos (sin título/descripción/ubicación)
-            if (!hasTitle && !hasDescription && !hasLocation && hasTechData) {
-                metadataPanel.classList.add('no-title');
-                if (metadataToggle) { metadataToggle.classList.remove('hidden'); }
-            }
-            // Casos 2/3/4: Con título/descripción/ubicación
-            else {
-                metadataPanel.classList.remove('no-title');
-                if (metadataToggle) {
-                    if (hasTechData) {
-                        metadataToggle.classList.remove('hidden');
-                    } else {
-                        metadataToggle.classList.add('hidden');
-                    }
-                }
-            }
-
-            // Aplicar estado inicial sin animación
-            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
-            if (metaTechnical) { metaTechnical.style.transition = 'none'; }
-            if (modalContentWrapper) { modalContentWrapper.style.transition = 'none'; }
-            if (exifPreference && hasTechData) {
-                if (metaTechnical) { metaTechnical.classList.add('open'); }
-                if (metadataToggle) { metadataToggle.classList.add('open'); }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ocultar metadatos'; }
-                applyExifOffset(true);
-            } else {
-                if (metaTechnical) { metaTechnical.classList.remove('open'); }
-                if (metadataToggle) { metadataToggle.classList.remove('open'); }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
-                applyExifOffset(false);
-            }
-            // Restaurar transiciones tras el primer frame
-            requestAnimationFrame(function() {
-                if (metaTechnical) { metaTechnical.style.transition = ''; }
-                if (modalContentWrapper) { modalContentWrapper.style.transition = ''; }
-            });
-
-            // Ajustar ancho del panel al ancho renderizado de la foto
-            requestAnimationFrame(syncPanelWidth);
-            // Si la imagen aún no ha cargado, recalcular cuando lo haga
-            if (imgZoom && !imgZoom.naturalWidth) {
-                imgZoom.addEventListener('load', function() {
-                    requestAnimationFrame(syncPanelWidth);
-                }, { once: true });
-            }
-        }
-
-        function applyExifOffset(open) {
-            if (!modalContentWrapper) { return; }
-            if (open && metaTechnical) {
-                var offset = Math.round(metaTechnical.offsetHeight / 2);
-                modalContentWrapper.style.transform = 'translateY(-' + offset + 'px)';
-            } else {
-                modalContentWrapper.style.transform = '';
-            }
-        }
-
-        window.toggleMetadata = function (event) {
-            if (event) { event.stopPropagation(); }
-            if (!metaTechnical) { return; }
-
-            var isOpen = metaTechnical.classList.contains('open');
-            var toggleTexts = document.querySelectorAll('.metadata-toggle-text');
-            if (isOpen) {
-                exifPreference = false;
-                metaTechnical.classList.remove('open');
-                if (metadataToggle) { metadataToggle.classList.remove('open'); }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Mostrar metadatos'; }
-                applyExifOffset(false);
-            } else {
-                exifPreference = true;
-                applyExifOffset(true);
-                metaTechnical.classList.add('open');
-                if (metadataToggle) { metadataToggle.classList.add('open'); }
-                for (var t = 0; t < toggleTexts.length; t++) { toggleTexts[t].textContent = 'Ocultar metadatos'; }
-            }
-        };
-
-        // Integrar con openZoom
-        var origOpenZoom = window.openZoom;
-        window.openZoom = function (src) {
-            origOpenZoom(src);
-            updateMetadataPanel();
-        };
-
-        // Integrar con changeModalImage
-        var origChangeModalImage = window.changeModalImage;
-        window.changeModalImage = function (dir, event) {
-            origChangeModalImage(dir, event);
-            updateMetadataPanel();
-        };
-
-        // Recalcular ancho del panel en resize
-        window.addEventListener('resize', syncPanelWidth);
-
-        // Nota: la integración zoom ↔ metadata se hace en el click handler
-        // existente de imgZoom (sección 4. ZOOM MODAL) que ya añade/quita
-        // la clase .zoomed en modalContentWrapper.
-
-        /* ═══════════════════════════════════════════
-           4b. DEEP LINK — compartir foto por URL hash
-               La URL cambia a #nombre-foto.avif al abrir
-               un modal, y se limpia al cerrar.
-               Cargar la página con ese hash abre la foto.
+           4c. DEEP LINK — compartir foto por URL hash
         ═══════════════════════════════════════════ */
 
         function _hashFilename(src) {
@@ -1155,9 +750,9 @@
 
         // Envolver changeModalImage → actualizar hash al navegar
         var _origChangeHash = window.changeModalImage;
-        window.changeModalImage = function (dir, event) {
-            _origChangeHash(dir, event);
-            if (imgZoom) { _setHash(imgZoom.src); }
+        window.changeModalImage = function (dir) {
+            _origChangeHash(dir);
+            if (photo) { _setHash(photo.src); }
         };
 
         // Envolver closeZoom → limpiar hash
