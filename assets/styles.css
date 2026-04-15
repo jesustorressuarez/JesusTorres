@@ -725,7 +725,6 @@ html.lenis, html.lenis body {
 }
 
 .hero_heading {
-    display: flex;
     gap: 32px;
     align-items: flex-end;
 }
@@ -734,7 +733,6 @@ html.lenis, html.lenis body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    width: 180%;
     min-width: 0;
     overflow: visible;
 }
@@ -764,7 +762,7 @@ html.lenis, html.lenis body {
 }
 
 .hero_heading_text {
-    padding: 8px 0;
+    text-align: right;
 }
 
 .hero_heading_text p {
@@ -1390,6 +1388,11 @@ input[type="tel"] {
     }
 
     .label-short {
+        font-size: 4.000rem;
+        font-weight: var(--text-black);
+        color: var(--General-400);
+        letter-spacing: -2.88px;
+        line-height: 95%;
         display: inline;
     }
 
@@ -1611,6 +1614,22 @@ input[type="tel"] {
 }
 
 @media (max-width: 1400px) {
+    .hero_complex{
+        gap: var(--gap-M);
+    }
+
+    .hero_heading{
+        gap: var(--gap-L);
+        align-items: flex-start;
+        display: flex;
+    }
+
+    .hero_simply{
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+
     .hero_heading{
         flex-flow: column;
     }
