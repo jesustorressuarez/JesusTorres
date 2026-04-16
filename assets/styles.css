@@ -1657,6 +1657,12 @@ input[type="tel"] {
     .hero_heading p {
         width: 100%;;
     }
+
+    .info_module{
+        gap: var(--gap-M);
+        display: flex;
+        flex-direction: column;
+    }
 }
 
 @media (min-width: 1800px) {
