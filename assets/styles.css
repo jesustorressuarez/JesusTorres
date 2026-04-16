@@ -112,7 +112,6 @@ html.lenis, html.lenis body {
     font-family: "Inter", sans-serif;
     text-decoration: none;
     position: relative;
-    z-index: 10000;
 }
 
 /* modal-open: oculta nav cuando el modal está abierto */
