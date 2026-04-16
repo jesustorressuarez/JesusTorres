@@ -27,7 +27,7 @@ html, body {
 body {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .wrapper {
@@ -1117,7 +1117,7 @@ html.lenis, html.lenis body {
 .contact_layout {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .contact_layout .hero_simply {
