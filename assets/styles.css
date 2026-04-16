@@ -13,6 +13,7 @@
    NO añadir height:100% — rompe el footer (body flex layout). */
 html, body {
     scrollbar-gutter: stable;
+    overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeSpeed;
