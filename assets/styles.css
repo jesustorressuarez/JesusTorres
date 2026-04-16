@@ -93,7 +93,9 @@ html.lenis, html.lenis body {
 
 .lenis.lenis-stopped {
     overflow: hidden;
-    padding-right: var(--scrollbar-w, 0px);
+    /* La compensación del ancho del scrollbar la hace `scrollbar-gutter: stable`
+       definido en html, body (reset base). No duplicar con padding-right aquí
+       o el contenido se reduce/desplaza al abrir modales (bug observado 2026-04-16). */
 }
 
 .lenis.lenis-scrolling iframe {
@@ -984,7 +986,7 @@ html.lenis, html.lenis body {
 .modal-overlay.standalone .nav-group,
 .modal-overlay.standalone .sep { display: none !important; }
 
-/* ══ WRAPPER: 90vw × 90vh — INAMOVIBLE ══ */
+/* ══ WRAPPER: 90vw × 90vh — SAGRADO, nada desborda ══ */
 .modal-wrapper {
     width: 90vw;
     height: 90vh;
@@ -992,7 +994,7 @@ html.lenis, html.lenis body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
 }
 

@@ -16,12 +16,10 @@
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        // Medir el ancho del scrollbar antes de cualquier cambio y guardarlo como variable CSS
-        // Esto permite que .lenis-stopped compense el espacio sin desplazamiento visible
-        (function () {
-            var sbw = window.innerWidth - document.documentElement.clientWidth;
-            document.documentElement.style.setProperty('--scrollbar-w', sbw + 'px');
-        })();
+        // Nota: la compensación del ancho del scrollbar al abrir modales se gestiona
+        // declarativamente con `scrollbar-gutter: stable` en html, body (ver styles.css).
+        // Por eso NO es necesario medir el scrollbar en JS ni aplicar padding-right
+        // compensatorio en .lenis.lenis-stopped.
 
         // Scroll suave para enlaces internos (requiere Lenis global)
         if (typeof lenis !== 'undefined') {
@@ -408,6 +406,17 @@
             var data = images[idx];
             photo.src = data.src;
 
+            /* Si la imagen NO está cacheada, ocultar paneles hasta que cargue:
+               evita ver los paneles con ancho incorrecto (90vw) durante la carga.
+               Si la imagen YA está cacheada, no ocultar — al final de showImage
+               llamamos a syncLayout() síncronamente y el navegador nunca
+               repinta un estado intermedio (evita el parpadeo del fix anterior). */
+            var isCached = photo.complete && photo.naturalWidth > 0;
+            if (!isCached) {
+                if (titlePanel) { titlePanel.style.visibility = 'hidden'; }
+                if (metaPanel)  { metaPanel.style.visibility  = 'hidden'; }
+            }
+
             /* ── Panel título ── */
             if (titlePanel) {
                 var hasTitle = data.title || data.desc;
@@ -459,6 +468,14 @@
 
             updateModalNavButtons();
             updateModalCounter();
+
+            /* Si la imagen ya estaba cacheada, sincronizar síncronamente:
+               el navegador no repinta entre showImage y syncLayout, así que
+               no hay flicker. Si no estaba cacheada, el evento 'load' de
+               abajo llamará a syncLayout cuando termine la descarga. */
+            if (isCached) {
+                syncLayout();
+            }
         }
 
         if (photo) {
@@ -523,23 +540,71 @@
            METADATOS
         ══════════════════════════════════════ */
 
-        /* ── Acorta el objetivo si su texto ocupa más de una línea ── */
-        function shortenLensIfWraps() {
+        /* ── Acorta Cámara y Objetivo si sus textos envuelven a 2 líneas ──
+           Bug original: comparaba offsetHeight contra parseFloat(lineHeight),
+           pero lineHeight se resuelve a "normal" (no hay regla CSS) y
+           parseFloat("normal") = NaN → la condición era siempre false y
+           nunca acortaba. Fix: usar fontSize * 1.5 como umbral.
+           Además se extiende al campo Cámara y se prueban reducciones
+           progresivas hasta que el texto quepa en una línea. */
+        function shortenExifIfWraps() {
             if (!metaPanel) { return; }
             var exifEl = metaPanel.querySelector('.modal-meta-exif');
             if (!exifEl) { return; }
             var divs = exifEl.querySelectorAll('div');
+
             for (var i = 0; i < divs.length; i++) {
                 var spans = divs[i].querySelectorAll('span');
                 if (spans.length < 2) { continue; }
-                if (spans[0].textContent !== 'Objetivo') { continue; }
+                var label = spans[0].textContent;
                 var valueSpan = spans[1];
-                var lh = parseFloat(getComputedStyle(valueSpan).lineHeight);
-                if (valueSpan.offsetHeight > lh * 1.5) {
-                    var m = valueSpan.textContent.match(/(\d+mm\s+f\/[\d.]+(?:-[\d.]+)?)/);
-                    if (m) { valueSpan.textContent = m[1]; }
+
+                if (label !== 'Cámara' && label !== 'Objetivo') { continue; }
+
+                /* Guardar texto original la primera vez para poder restaurarlo
+                   en futuras sincros (ej: resize a ventana más ancha). */
+                if (!valueSpan.hasAttribute('data-original')) {
+                    valueSpan.setAttribute('data-original', valueSpan.textContent);
                 }
-                break;
+                var originalText = valueSpan.getAttribute('data-original');
+
+                /* Empezar siempre desde el texto original y re-decidir. */
+                valueSpan.textContent = originalText;
+
+                /* Umbral de detección de wrap: 1.5 × fontSize en px.
+                   Una línea ≈ fontSize × 1.2 (line-height normal).
+                   Dos líneas ≈ fontSize × 2.4. El 1.5 separa sin falsos positivos. */
+                var fs = parseFloat(getComputedStyle(valueSpan).fontSize) || 13;
+                var threshold = fs * 1.5;
+
+                if (valueSpan.offsetHeight <= threshold) { continue; }
+
+                /* Construir candidatos progresivos según el campo. */
+                var candidates = [];
+
+                if (label === 'Objetivo') {
+                    /* Capturar rango/foco completo incluyendo zooms: "55-250mm f/4-5.6" */
+                    var m1 = originalText.match(/(\d+(?:-\d+)?mm\s+f\/[\d.]+(?:-[\d.]+)?)/);
+                    if (m1) { candidates.push(m1[1]); }
+                    /* Solo el rango focal: "55-250mm" */
+                    var m2 = originalText.match(/(\d+(?:-\d+)?mm)/);
+                    if (m2) { candidates.push(m2[1]); }
+                } else if (label === 'Cámara') {
+                    /* Quitar marca: "Canon EOS 2000D" → "EOS 2000D" */
+                    var brandRx = /^(Canon|Nikon|Sony|Fujifilm|Fuji|Olympus|OM System|Panasonic|Leica|Pentax|Sigma|Samsung|Kodak|Hasselblad|Ricoh|Casio)\s+/i;
+                    var noBrand = originalText.replace(brandRx, '');
+                    if (noBrand !== originalText) { candidates.push(noBrand); }
+                    /* Quitar línea de producto: "EOS 2000D" → "2000D" */
+                    var lineRx = /^(EOS|Alpha|α|Lumix|PowerShot|Coolpix|X-[A-Z]?|OM-[A-Z]?|Z\s*\d*|D\s*\d*)\s*/i;
+                    var noLine = noBrand.replace(lineRx, '');
+                    if (noLine && noLine !== noBrand) { candidates.push(noLine); }
+                }
+
+                /* Probar candidatos progresivamente hasta que uno quepa en 1 línea. */
+                for (var c = 0; c < candidates.length; c++) {
+                    valueSpan.textContent = candidates[c];
+                    if (valueSpan.offsetHeight <= threshold) { break; }
+                }
             }
         }
 
@@ -556,47 +621,72 @@
             }
             requestAnimationFrame(function () {
                 syncLayout();
-                if (metaVisible) { shortenLensIfWraps(); }
+                if (metaVisible) { shortenExifIfWraps(); }
             });
         };
 
         function syncLayout() {
             if (!photo || !photo.naturalWidth || !photoArea) { return; }
 
-            /* Ocultar paneles ANTES de cualquier reset de ancho.
-               Como todo ocurre síncronamente, el navegador solo renderiza
-               el estado final — el usuario nunca ve el ancho al 100%. */
+            /* Regla sagrada: el wrapper 90vw×90vh NUNCA desborda.
+               La foto encoge para hacerle sitio al título y al meta-panel. */
+
+            /* Ocultar paneles durante el cálculo: el usuario solo ve el estado final. */
             if (titlePanel) { titlePanel.style.visibility = 'hidden'; }
             if (metaPanel)  { metaPanel.style.visibility  = 'hidden'; }
 
-            /* 1. Resetear para medir con flex:1 limpio */
+            /* 1. Reset: flex:1 en photoArea, sin maxHeight, paneles a ancho natural (100%) */
             photoArea.style.flex = '';
             photo.style.maxHeight = '';
             if (titlePanel) { titlePanel.style.width = ''; }
             if (metaPanel)  { metaPanel.style.width  = ''; }
             void photoArea.offsetHeight;
 
-            /* 2. Capturar la altura disponible (photoArea en flex:1) */
+            /* 2. Primera pasada: max-height provisional con altura disponible bruta */
             var availH = photoArea.clientHeight;
-
-            /* 3. Fijar max-height en px en el img y encoger photoArea */
             photo.style.maxHeight = availH + 'px';
             photoArea.style.flex = '0 0 auto';
             void photoArea.offsetHeight;
 
-            /* 4. Leer el ancho renderizado real */
+            /* 3. Aplicar ancho=foto a los paneles (esto puede cambiar su altura
+               porque el EXIF envuelve distinto al ser más estrecho) */
             var w = photo.offsetWidth;
-
-            /* 5. Título y panel metadatos = mismo ancho que la foto */
             if (w > 0) {
                 if (titlePanel && titlePanel.style.display !== 'none') { titlePanel.style.width = w + 'px'; }
                 if (metaVisible && metaPanel) {
                     metaPanel.style.width = w + 'px';
-                    shortenLensIfWraps();
+                    shortenExifIfWraps();
+                }
+            }
+            void photoArea.offsetHeight;
+
+            /* 4. Segunda pasada: con el ancho real aplicado, medir las alturas
+               finales de título y meta. Si la foto + paneles excede el wrapper,
+               encoger la foto para caber en 90vh. */
+            if (wrapper) {
+                var wrapperH = wrapper.clientHeight;
+                var titleH = (titlePanel && titlePanel.style.display !== 'none') ? titlePanel.offsetHeight : 0;
+                var metaH  = (metaVisible && metaPanel) ? metaPanel.offsetHeight : 0;
+                var maxPhotoH = wrapperH - titleH - metaH;
+                if (maxPhotoH < 0) { maxPhotoH = 0; }
+
+                if (photo.offsetHeight > maxPhotoH) {
+                    photo.style.maxHeight = maxPhotoH + 'px';
+                    void photoArea.offsetHeight;
+
+                    /* La foto ha encogido → su ancho también → recalcular paneles */
+                    var wFinal = photo.offsetWidth;
+                    if (wFinal > 0 && wFinal !== w) {
+                        if (titlePanel && titlePanel.style.display !== 'none') { titlePanel.style.width = wFinal + 'px'; }
+                        if (metaVisible && metaPanel) {
+                            metaPanel.style.width = wFinal + 'px';
+                            shortenExifIfWraps();
+                        }
+                    }
                 }
             }
 
-            /* 6. Restaurar visibilidad — todo ha ocurrido en el mismo frame */
+            /* 5. Restaurar visibilidad */
             if (titlePanel) { titlePanel.style.visibility = ''; }
             if (metaPanel)  { metaPanel.style.visibility  = ''; }
         }
