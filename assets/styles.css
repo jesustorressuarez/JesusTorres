@@ -1682,7 +1682,15 @@ input[type="tel"] {
 
 /* ── Modal: responsive mobile ── */
 @media (max-width: 768px) {
-    .modal-nav { right: 16px; gap: 8px; }
+    .modal-nav {
+        /* Contenedor a ancho completo para centrar sin comprimir los botones */
+        left: 0;
+        right: 0;
+        justify-content: center;
+        /* Despegar la botonera del home-indicator de iPhone */
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        gap: 8px;
+    }
     .modal-counter { display: none; }
     .modal-counter-inline { display: inline; }
     .modal-meta-panel { padding: 10px; }
