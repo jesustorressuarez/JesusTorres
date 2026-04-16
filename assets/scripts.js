@@ -887,6 +887,28 @@
                 }
             }
 
+            function commitSwipeNav(dir) {
+                /* Fase 1: la foto actual termina de salir en la dirección del swipe.
+                   Fase 2: se cambia la imagen y el wrapper salta al lado opuesto fuera de pantalla.
+                   Fase 3: el wrapper vuelve al centro → efecto de "foto nueva entrando". */
+                var vw = window.innerWidth;
+                var off = dir > 0 ? -vw : vw;
+                wrapper.style.transition = 'transform 0.18s ease-out';
+                wrapper.style.transform  = 'translateX(' + off + 'px)';
+                setTimeout(function () {
+                    wrapper.style.transition = 'none';
+                    wrapper.style.transform  = 'translateX(' + (-off) + 'px)';
+                    window.changeModalImage(dir);
+                    void wrapper.offsetHeight;
+                    wrapper.style.transition = 'transform 0.2s ease-out';
+                    wrapper.style.transform  = '';
+                    setTimeout(function () {
+                        wrapper.style.transition = '';
+                        wrapper.style.transform  = '';
+                    }, 220);
+                }, 180);
+            }
+
             function closeViaSwipe() {
                 var h = window.innerHeight;
                 wrapper.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
@@ -1070,9 +1092,10 @@
                     var canNav = (dxEnd < 0 && currentIdx < slides.length - 1) ||
                                  (dxEnd > 0 && currentIdx > 0);
                     if (past && canNav) {
-                        window.changeModalImage(dxEnd < 0 ? 1 : -1);
+                        commitSwipeNav(dxEnd < 0 ? 1 : -1);
+                    } else {
+                        clearWrapperDrag(true);
                     }
-                    clearWrapperDrag(true);
                     e.preventDefault();
                     return;
                 }
