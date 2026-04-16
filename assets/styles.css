@@ -833,6 +833,25 @@ html.lenis, html.lenis body {
     gap: 4px 0;
 }
 
+
+/* ═══════════════════════════════════════════
+   CONTENIDO DE PROYECTOS
+═══════════════════════════════════════════ */
+
+.info_module{
+    width: 100%;
+}
+
+.info_module img{
+    max-height: var(--height-XXL);
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius);
+    object-fit: cover;
+    object-position: center;
+}
+
+
 /* ═══════════════════════════════════════════
    CAROUSEL
 ═══════════════════════════════════════════ */
