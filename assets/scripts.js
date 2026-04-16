@@ -765,7 +765,11 @@
 
         /* ── Events ── */
 
-        if (photo) {
+        /* En mobile usamos gestos táctiles (swipe, pinch, double-tap).
+           El click/mousemove de desktop se desactiva para evitar conflictos. */
+        var isMobileModal = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches) && window.matchMedia('(max-width: 768px)').matches;
+
+        if (photo && !isMobileModal) {
             photo.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if (!isZoomed) {
@@ -784,7 +788,7 @@
             });
         }
 
-        if (photoArea) {
+        if (photoArea && !isMobileModal) {
             var ticking = false;
             photoArea.addEventListener('mousemove', function (e) {
                 if (!isZoomed || ticking) { return; }
@@ -796,11 +800,303 @@
             });
         }
 
-        if (modal) {
+        if (modal && !isMobileModal) {
             modal.addEventListener('click', function (e) {
                 if (e.target === modal || e.target === wrapper || e.target === photoArea) {
                     window.closeZoom();
                 }
+            });
+        }
+
+        /* ══════════════════════════════════════
+           NAVEGACIÓN TÁCTIL MOBILE (solo modal)
+           - Swipe horizontal → foto anterior/siguiente
+           - Swipe hacia abajo → cerrar (umbral 120px o velocidad)
+           - Doble tap → toggle zoom (x2.5, centrado en el tap)
+           - Pinch → zoom continuo (1x–4x); snap a 1x si < 1.3x
+           - Drag 1 dedo (con zoom) → pan
+           - Tap simple → sin acción (bloqueado)
+        ══════════════════════════════════════ */
+
+        if (isMobileModal && photoArea && modal && wrapper && photo) {
+            var SWIPE_H_THRESHOLD   = 60;   /* px para commit nav horizontal  */
+            var SWIPE_V_CLOSE       = 120;  /* px para cerrar (swipe abajo)   */
+            var SWIPE_VELOCITY      = 0.4;  /* px/ms — flick rápido           */
+            var DOUBLE_TAP_MS       = 300;
+            var DOUBLE_TAP_DIST     = 40;
+            var TAP_MOVE_THRESHOLD  = 8;
+            var ZOOM_MIN            = 1;
+            var ZOOM_MAX            = 4;
+            var ZOOM_SNAP_IN        = 2.5;
+            var ZOOM_SNAP_OUT_BELOW = 1.3;
+
+            var mScale = 1, mPanX = 0, mPanY = 0;
+            var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+            var gesture = null;
+
+            function applyPhotoTransform() {
+                if (mScale > 1.01) {
+                    photo.style.transform = 'translate(' + mPanX + 'px,' + mPanY + 'px) scale(' + mScale + ')';
+                    photo.classList.add('zoomed');
+                    wrapper.classList.add('is-zoomed');
+                    isZoomed = true;
+                } else {
+                    photo.style.transform = '';
+                    photo.classList.remove('zoomed');
+                    wrapper.classList.remove('is-zoomed');
+                    mScale = 1; mPanX = 0; mPanY = 0;
+                    isZoomed = false;
+                }
+            }
+
+            function clampMobilePan() {
+                var area = photoArea.getBoundingClientRect();
+                var scaledW = photo.offsetWidth * mScale;
+                var scaledH = photo.offsetHeight * mScale;
+                var maxX = Math.max(0, (scaledW - area.width) / 2);
+                var maxY = Math.max(0, (scaledH - area.height) / 2);
+                mPanX = Math.max(-maxX, Math.min(maxX, mPanX));
+                mPanY = Math.max(-maxY, Math.min(maxY, mPanY));
+            }
+
+            function touchDist(a, b) {
+                var dx = a.clientX - b.clientX, dy = a.clientY - b.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            function touchMid(a, b) {
+                return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+            }
+            function areaMid() {
+                var r = photoArea.getBoundingClientRect();
+                return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+            }
+
+            function clearWrapperDrag(animate) {
+                if (animate) {
+                    wrapper.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+                    modal.style.transition  = 'background 0.25s ease-out';
+                }
+                wrapper.style.transform = '';
+                wrapper.style.opacity   = '';
+                modal.style.background  = '';
+                if (animate) {
+                    setTimeout(function () {
+                        wrapper.style.transition = '';
+                        modal.style.transition   = '';
+                    }, 270);
+                }
+            }
+
+            function closeViaSwipe() {
+                var h = window.innerHeight;
+                wrapper.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+                wrapper.style.transform  = 'translateY(' + h + 'px)';
+                wrapper.style.opacity    = '0';
+                modal.style.transition   = 'background 0.25s ease-out';
+                modal.style.background   = 'rgba(0,0,0,0)';
+                setTimeout(function () {
+                    window.closeZoom();
+                    wrapper.style.transition = '';
+                    wrapper.style.transform  = '';
+                    wrapper.style.opacity    = '';
+                    modal.style.transition   = '';
+                    modal.style.background   = '';
+                    mScale = 1; mPanX = 0; mPanY = 0;
+                }, 260);
+            }
+
+            function toggleZoomAt(x, y) {
+                var ac = areaMid();
+                photo.style.transition = 'transform 0.25s ease-out';
+                if (mScale > 1.01) {
+                    mScale = 1; mPanX = 0; mPanY = 0;
+                } else {
+                    mScale = ZOOM_SNAP_IN;
+                    /* Punto de image-space bajo el tap (escala 1, pan 0):
+                       ix = x - areaCx. Queremos que vaya al centro → panX = -ix * scale. */
+                    mPanX = -(x - ac.x) * mScale;
+                    mPanY = -(y - ac.y) * mScale;
+                    clampMobilePan();
+                }
+                applyPhotoTransform();
+                setTimeout(function () { photo.style.transition = ''; }, 270);
+            }
+
+            photoArea.addEventListener('touchstart', function (e) {
+                /* Sincronizar estado con lo que realmente está visible
+                   (resetZoom externo puede haber limpiado el transform). */
+                if (!isZoomed) { mScale = 1; mPanX = 0; mPanY = 0; }
+
+                if (e.touches.length === 2) {
+                    var t1 = e.touches[0], t2 = e.touches[1];
+                    var mid = touchMid(t1, t2);
+                    var ac = areaMid();
+                    gesture = {
+                        type: 'pinch',
+                        startDist: touchDist(t1, t2),
+                        startScale: mScale,
+                        /* Punto image-space bajo el centro del pinch en el instante inicial */
+                        ispX: (mid.x - ac.x - mPanX) / mScale,
+                        ispY: (mid.y - ac.y - mPanY) / mScale
+                    };
+                    e.preventDefault();
+                } else if (e.touches.length === 1) {
+                    var t = e.touches[0];
+                    var now = Date.now();
+                    var isDoubleTap = (now - lastTapTime < DOUBLE_TAP_MS) &&
+                                      (Math.abs(t.clientX - lastTapX) < DOUBLE_TAP_DIST) &&
+                                      (Math.abs(t.clientY - lastTapY) < DOUBLE_TAP_DIST);
+                    gesture = {
+                        type: isZoomed ? 'pan' : 'pending',
+                        startX: t.clientX, startY: t.clientY,
+                        lastX: t.clientX,  lastY: t.clientY,
+                        startTime: now,
+                        startPanX: mPanX, startPanY: mPanY,
+                        isDoubleTap: isDoubleTap,
+                        moved: false
+                    };
+                }
+            }, { passive: false });
+
+            photoArea.addEventListener('touchmove', function (e) {
+                if (!gesture) { return; }
+
+                if (gesture.type === 'pinch' && e.touches.length === 2) {
+                    var t1 = e.touches[0], t2 = e.touches[1];
+                    var d  = touchDist(t1, t2);
+                    var mid = touchMid(t1, t2);
+                    var ac = areaMid();
+                    var s  = gesture.startScale * (d / gesture.startDist);
+                    s = Math.max(ZOOM_MIN * 0.8, Math.min(ZOOM_MAX, s));
+                    mScale = s;
+                    /* Mantener el punto inicial bajo el centro actual del pinch */
+                    mPanX = mid.x - ac.x - gesture.ispX * mScale;
+                    mPanY = mid.y - ac.y - gesture.ispY * mScale;
+                    applyPhotoTransform();
+                    e.preventDefault();
+                    return;
+                }
+
+                if (e.touches.length !== 1) { return; }
+                var t  = e.touches[0];
+                var dx = t.clientX - gesture.startX;
+                var dy = t.clientY - gesture.startY;
+                gesture.lastX = t.clientX;
+                gesture.lastY = t.clientY;
+                if (Math.abs(dx) > TAP_MOVE_THRESHOLD || Math.abs(dy) > TAP_MOVE_THRESHOLD) {
+                    gesture.moved = true;
+                }
+
+                if (gesture.type === 'pan') {
+                    mPanX = gesture.startPanX + dx;
+                    mPanY = gesture.startPanY + dy;
+                    clampMobilePan();
+                    applyPhotoTransform();
+                    e.preventDefault();
+                    return;
+                }
+
+                if (gesture.type === 'pending') {
+                    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) { return; }
+                    gesture.type = Math.abs(dx) > Math.abs(dy) ? 'swipe-h' : 'swipe-v';
+                }
+
+                if (gesture.type === 'swipe-h') {
+                    /* Resistencia en los extremos (rubber-band) */
+                    var edge = (dx > 0 && currentIdx === 0) ||
+                               (dx < 0 && currentIdx === slides.length - 1);
+                    var k = edge ? 0.35 : 1;
+                    wrapper.style.transition = 'none';
+                    wrapper.style.transform  = 'translateX(' + (dx * k) + 'px)';
+                    e.preventDefault();
+                } else if (gesture.type === 'swipe-v') {
+                    /* Solo hacia abajo cierra; arriba tiene rubber-band */
+                    var eff = dy > 0 ? dy : dy * 0.3;
+                    wrapper.style.transition = 'none';
+                    wrapper.style.transform  = 'translateY(' + eff + 'px)';
+                    var prog = Math.min(1, Math.abs(dy) / 400);
+                    modal.style.transition = 'none';
+                    modal.style.background = 'rgba(0,0,0,' + (0.85 * (1 - prog * 0.8)) + ')';
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            photoArea.addEventListener('touchend', function (e) {
+                if (!gesture) { return; }
+                var g = gesture;
+                gesture = null;
+
+                if (g.type === 'pinch') {
+                    if (mScale < ZOOM_SNAP_OUT_BELOW) {
+                        mScale = 1; mPanX = 0; mPanY = 0;
+                    } else if (mScale > ZOOM_MAX) {
+                        mScale = ZOOM_MAX;
+                    }
+                    clampMobilePan();
+                    photo.style.transition = 'transform 0.2s ease-out';
+                    applyPhotoTransform();
+                    setTimeout(function () { photo.style.transition = ''; }, 220);
+                    e.preventDefault();
+                    return;
+                }
+
+                /* Tap (con o sin zoom): detectar double-tap para alternar zoom.
+                   Single tap bloqueado intencionalmente. */
+                if (!g.moved) {
+                    if (g.isDoubleTap) {
+                        toggleZoomAt(g.startX, g.startY);
+                        lastTapTime = 0;
+                    } else {
+                        lastTapTime = Date.now();
+                        lastTapX = g.startX;
+                        lastTapY = g.startY;
+                    }
+                    e.preventDefault();
+                    return;
+                }
+
+                if (g.type === 'pan') {
+                    clampMobilePan();
+                    applyPhotoTransform();
+                    e.preventDefault();
+                    return;
+                }
+
+                if (g.type === 'swipe-h') {
+                    var dxEnd  = g.lastX - g.startX;
+                    var dur    = Date.now() - g.startTime;
+                    var vel    = Math.abs(dxEnd) / Math.max(1, dur);
+                    var past   = Math.abs(dxEnd) > SWIPE_H_THRESHOLD || vel > SWIPE_VELOCITY;
+                    var canNav = (dxEnd < 0 && currentIdx < slides.length - 1) ||
+                                 (dxEnd > 0 && currentIdx > 0);
+                    if (past && canNav) {
+                        window.changeModalImage(dxEnd < 0 ? 1 : -1);
+                    }
+                    clearWrapperDrag(true);
+                    e.preventDefault();
+                    return;
+                }
+
+                if (g.type === 'swipe-v') {
+                    var dyEnd = g.lastY - g.startY;
+                    var durV  = Date.now() - g.startTime;
+                    var velV  = dyEnd / Math.max(1, durV);
+                    if (dyEnd > SWIPE_V_CLOSE || velV > SWIPE_VELOCITY) {
+                        closeViaSwipe();
+                    } else {
+                        clearWrapperDrag(true);
+                    }
+                    e.preventDefault();
+                    return;
+                }
+            }, { passive: false });
+
+            photoArea.addEventListener('touchcancel', function () {
+                if (!gesture) { return; }
+                if (gesture.type === 'swipe-h' || gesture.type === 'swipe-v') {
+                    clearWrapperDrag(true);
+                }
+                gesture = null;
             });
         }
 
