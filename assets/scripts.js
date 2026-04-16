@@ -800,9 +800,13 @@
             });
         }
 
-        if (modal && !isMobileModal) {
+        if (modal) {
             modal.addEventListener('click', function (e) {
-                if (e.target === modal || e.target === wrapper || e.target === photoArea) {
+                /* Cierra al tocar backdrop/wrapper (o photoArea en desktop).
+                   En mobile, el tap simple sobre la img está bloqueado por el touch handler,
+                   pero un tap fuera de la img (modal o wrapper) sí cierra. */
+                if (e.target === modal || e.target === wrapper ||
+                    (!isMobileModal && e.target === photoArea)) {
                     window.closeZoom();
                 }
             });
@@ -834,18 +838,51 @@
             var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
             var gesture = null;
 
+            /* En mobile, syncLayout fija photoArea.style.flex=0 0 auto y photo.style.maxHeight
+               para que el conjunto foto + título + meta quepa en el wrapper. Al entrar en
+               zoom, los paneles se ocultan (CSS .is-zoomed) y queremos que la foto llene
+               el wrapper entero. Hay que deshacer esos inline styles y restaurarlos al salir. */
+            function enterZoomLayout() {
+                photoArea.style.flex = '';
+                photo.style.maxHeight = '';
+                void photoArea.offsetHeight;
+            }
+            function exitZoomLayout() {
+                if (typeof syncLayout === 'function') { syncLayout(); }
+            }
+
+            /* Escala mínima para cubrir el wrapper: la foto fit-contained queda letterboxed;
+               para llenar 90vw×90vh hace falta escalar al menos max(wrapW/fotoW, wrapH/fotoH). */
+            function computeCoverScale() {
+                if (!wrapper || !photo) { return 1; }
+                var wr = wrapper.getBoundingClientRect();
+                var pw = photo.offsetWidth, ph = photo.offsetHeight;
+                if (!pw || !ph || !wr.width || !wr.height) { return 1; }
+                return Math.max(wr.width / pw, wr.height / ph);
+            }
+
             function applyPhotoTransform() {
-                if (mScale > 1.01) {
+                var wasZoomed = isZoomed;
+                var willZoom = mScale > 1.01;
+                if (willZoom) {
+                    if (!wasZoomed) {
+                        photo.classList.add('zoomed');
+                        wrapper.classList.add('is-zoomed');
+                        isZoomed = true;
+                        enterZoomLayout();
+                    }
                     photo.style.transform = 'translate(' + mPanX + 'px,' + mPanY + 'px) scale(' + mScale + ')';
-                    photo.classList.add('zoomed');
-                    wrapper.classList.add('is-zoomed');
-                    isZoomed = true;
                 } else {
-                    photo.style.transform = '';
-                    photo.classList.remove('zoomed');
-                    wrapper.classList.remove('is-zoomed');
+                    if (wasZoomed) {
+                        photo.classList.remove('zoomed');
+                        wrapper.classList.remove('is-zoomed');
+                        isZoomed = false;
+                        photo.style.transform = '';
+                        exitZoomLayout();
+                    } else {
+                        photo.style.transform = '';
+                    }
                     mScale = 1; mPanX = 0; mPanY = 0;
-                    isZoomed = false;
                 }
             }
 
@@ -873,8 +910,8 @@
 
             function clearWrapperDrag(animate) {
                 if (animate) {
-                    wrapper.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
-                    modal.style.transition  = 'background 0.25s ease-out';
+                    wrapper.style.transition = 'transform 0.18s ease-out, opacity 0.18s ease-out';
+                    modal.style.transition  = 'background 0.18s ease-out';
                 }
                 wrapper.style.transform = '';
                 wrapper.style.opacity   = '';
@@ -883,30 +920,31 @@
                     setTimeout(function () {
                         wrapper.style.transition = '';
                         modal.style.transition   = '';
-                    }, 270);
+                    }, 200);
                 }
             }
 
             function commitSwipeNav(dir) {
                 /* Fase 1: la foto actual termina de salir en la dirección del swipe.
                    Fase 2: se cambia la imagen y el wrapper salta al lado opuesto fuera de pantalla.
-                   Fase 3: el wrapper vuelve al centro → efecto de "foto nueva entrando". */
+                   Fase 3: el wrapper vuelve al centro → efecto de "foto nueva entrando".
+                   Tiempos estilo Instagram: rápido (~260ms total). */
                 var vw = window.innerWidth;
                 var off = dir > 0 ? -vw : vw;
-                wrapper.style.transition = 'transform 0.18s ease-out';
+                wrapper.style.transition = 'transform 0.12s ease-out';
                 wrapper.style.transform  = 'translateX(' + off + 'px)';
                 setTimeout(function () {
                     wrapper.style.transition = 'none';
                     wrapper.style.transform  = 'translateX(' + (-off) + 'px)';
                     window.changeModalImage(dir);
                     void wrapper.offsetHeight;
-                    wrapper.style.transition = 'transform 0.2s ease-out';
+                    wrapper.style.transition = 'transform 0.14s ease-out';
                     wrapper.style.transform  = '';
                     setTimeout(function () {
                         wrapper.style.transition = '';
                         wrapper.style.transform  = '';
-                    }, 220);
-                }, 180);
+                    }, 160);
+                }, 120);
             }
 
             function closeViaSwipe() {
@@ -928,23 +966,30 @@
             }
 
             function toggleZoomAt(x, y) {
-                var ac = areaMid();
                 photo.style.transition = 'transform 0.25s ease-out';
                 if (mScale > 1.01) {
+                    /* Zoom out */
                     mScale = 1; mPanX = 0; mPanY = 0;
+                    applyPhotoTransform();
                 } else {
-                    mScale = ZOOM_SNAP_IN;
-                    /* Punto de image-space bajo el tap (escala 1, pan 0):
-                       ix = x - areaCx. Queremos que vaya al centro → panX = -ix * scale. */
+                    /* Zoom in: expandir primero photoArea (oculta títulos y recalcula fit)
+                       ANTES de medir, para que computeCoverScale use el tamaño final. */
+                    photo.classList.add('zoomed');
+                    wrapper.classList.add('is-zoomed');
+                    isZoomed = true;
+                    enterZoomLayout();
+                    var cover = computeCoverScale();
+                    mScale = Math.max(ZOOM_SNAP_IN, cover);
+                    var ac = areaMid();
                     mPanX = -(x - ac.x) * mScale;
                     mPanY = -(y - ac.y) * mScale;
                     clampMobilePan();
+                    photo.style.transform = 'translate(' + mPanX + 'px,' + mPanY + 'px) scale(' + mScale + ')';
                 }
-                applyPhotoTransform();
                 setTimeout(function () { photo.style.transition = ''; }, 270);
             }
 
-            photoArea.addEventListener('touchstart', function (e) {
+            wrapper.addEventListener('touchstart', function (e) {
                 /* Sincronizar estado con lo que realmente está visible
                    (resetZoom externo puede haber limpiado el transform). */
                 if (!isZoomed) { mScale = 1; mPanX = 0; mPanY = 0; }
@@ -980,7 +1025,7 @@
                 }
             }, { passive: false });
 
-            photoArea.addEventListener('touchmove', function (e) {
+            wrapper.addEventListener('touchmove', function (e) {
                 if (!gesture) { return; }
 
                 if (gesture.type === 'pinch' && e.touches.length === 2) {
@@ -1043,7 +1088,7 @@
                 }
             }, { passive: false });
 
-            photoArea.addEventListener('touchend', function (e) {
+            wrapper.addEventListener('touchend', function (e) {
                 if (!gesture) { return; }
                 var g = gesture;
                 gesture = null;
@@ -1051,8 +1096,12 @@
                 if (g.type === 'pinch') {
                     if (mScale < ZOOM_SNAP_OUT_BELOW) {
                         mScale = 1; mPanX = 0; mPanY = 0;
-                    } else if (mScale > ZOOM_MAX) {
-                        mScale = ZOOM_MAX;
+                    } else {
+                        /* Si quedó por debajo de la cover-scale, subir hasta ella
+                           para que el wrapper quede siempre totalmente cubierto. */
+                        var coverS = computeCoverScale();
+                        if (mScale < coverS) { mScale = coverS; }
+                        if (mScale > ZOOM_MAX) { mScale = ZOOM_MAX; }
                     }
                     clampMobilePan();
                     photo.style.transition = 'transform 0.2s ease-out';
@@ -1114,7 +1163,7 @@
                 }
             }, { passive: false });
 
-            photoArea.addEventListener('touchcancel', function () {
+            wrapper.addEventListener('touchcancel', function () {
                 if (!gesture) { return; }
                 if (gesture.type === 'swipe-h' || gesture.type === 'swipe-v') {
                     clearWrapperDrag(true);
