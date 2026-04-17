@@ -471,14 +471,14 @@
             { id: 'claude', name: 'CLAUDE (AI)', icon: '../assets/img/icons/claude.svg', desc: 'Integración de inteligencia artificial en mi flujo de trabajo diario: automatización de tareas, generación de código, análisis de documentación y desarrollo web asistido.' }
         ];
 
-        var SEP = ' \u00a0\u00a0\u00a0\u00a0\u00a0 \u2055 \u00a0\u00a0\u00a0\u00a0\u00a0 ';
+        var SEP = ' \u00a0\u00a0\u00a0\u00a0\u00a0 / \u00a0\u00a0\u00a0\u00a0\u00a0 ';
 
         function buildItems() {
             var html = '';
             for (var i = 0; i < SOFTWARE.length; i++) {
                 var s = SOFTWARE[i];
                 html += '<span class="sw-item" data-sw="' + s.id + '"><img class="marquee-icon" src="' + s.icon + '" alt="">' + s.name + '</span>';
-                html += '<span class="separator" style="padding:0 1.2em;opacity:.4;pointer-events:none;">\u2055</span>';
+                html += '<span class="separator" style="padding:0 1.2em;opacity:.4;pointer-events:none;">/</span>';
             }
             return html;
         }
