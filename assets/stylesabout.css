@@ -104,6 +104,14 @@
 .marquee__content {
   display: flex;
   animation: scroll 40s linear infinite;
+  animation-play-state: paused; /* arranca cuando las imágenes han cargado (JS añade .is-ready) */
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.marquee__content.is-ready {
+  animation-play-state: running;
 }
 
 .marquee__content span {
@@ -143,9 +151,12 @@
   }
 }
 
-/* Opcional: Pausa el cintillo cuando pasas el ratón por encima */
-.marquee:hover .marquee__content {
-  animation-play-state: paused;
+/* Pausa el cintillo al pasar el ratón por encima (solo dispositivos con hover real;
+   en táctil :hover queda sticky tras un tap y congelaba la animación) */
+@media (hover: hover) and (pointer: fine) {
+  .marquee:hover .marquee__content.is-ready {
+    animation-play-state: paused;
+  }
 }
 
 
@@ -324,24 +335,30 @@ a.big_button {
 
     /* Tooltip mobile */
     .sw-tooltip.open {
-        max-height: 220px;
+        max-height: 420px; /* antes 220px, cortaba descripciones largas */
     }
     .sw-tooltip__inner {
         flex-direction: column;
         align-items: flex-start;
-        gap: 12px;
-        padding: 20px 24px;
+        gap: 10px;
+        padding: 20px 24px 22px 24px;
+        padding-right: 56px; /* hueco para el botón de cerrar absoluto */
     }
     .sw-tooltip__close {
         position: absolute;
-        right: 16px;
-        top: 14px;
+        right: 12px;
+        top: 12px;
+        font-size: 1.4rem;
+        padding: 6px 10px;
     }
     .sw-tooltip {
         position: relative;
     }
     .sw-tooltip__icon {
         height: 1.8rem;
+    }
+    .sw-tooltip__desc {
+        line-height: 1.5;
     }
 }
 
