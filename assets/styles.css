@@ -1015,6 +1015,11 @@ html.lenis, html.lenis body {
     justify-content: center;
     overflow: hidden;
     position: relative;
+    /* Jerarquía: el wrapper (foto + paneles) va SIEMPRE por debajo
+       de los botones del modal (.modal-nav y .modal-counter, z-index 10001).
+       Si el wrapper y los botones llegaran a superponerse, los botones
+       deben seguir viéndose por encima. */
+    z-index: 1;
 }
 
 /* ── Zona foto ── */

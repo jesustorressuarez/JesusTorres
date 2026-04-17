@@ -489,6 +489,33 @@
         var items = buildItems();
         mc.innerHTML = '<span>' + items + items + '</span><span aria-hidden="true">' + items + items + '</span>';
 
+        // Arrancar la animación SOLO cuando los iconos han cargado,
+        // si no, el ancho del track cambia al cargar los SVG y la animación pega un salto inicial.
+        (function startWhenReady() {
+            var imgs = mc.querySelectorAll('img');
+            if (imgs.length === 0) { mc.classList.add('is-ready'); return; }
+            var pending = imgs.length;
+            var done = function () {
+                pending -= 1;
+                if (pending <= 0) {
+                    // Un rAF extra para que el navegador asiente layout antes de iniciar
+                    requestAnimationFrame(function () {
+                        mc.classList.add('is-ready');
+                    });
+                }
+            };
+            Array.prototype.forEach.call(imgs, function (img) {
+                if (img.complete && img.naturalWidth !== 0) {
+                    done();
+                } else {
+                    img.addEventListener('load', done, { once: true });
+                    img.addEventListener('error', done, { once: true });
+                }
+            });
+            // Salvavidas: pase lo que pase, no dejar el marquee parado para siempre.
+            setTimeout(function () { mc.classList.add('is-ready'); }, 2500);
+        })();
+
         var bar = document.getElementById('swTooltip');
         var activeId = null;
 
