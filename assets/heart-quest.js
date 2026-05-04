@@ -53,6 +53,15 @@
                 'Vive al final de cada página, escondido a plena vista.',
                 'Pulsa el corazón rojo del footer y disfruta del espectáculo.'
             ]
+        },
+        {
+            id: 'abuela',
+            title: 'Mi tesoro más preciado',
+            hints: [
+                'Está flotando sobre alguien muy especial para mí',
+                'Búscalo entre mis fotografías favoritas',
+                'En la galería «Mis Favoritas», hay un corazón latiendo sobre la foto de mi abuela. Púlsalo.'
+            ]
         }
     ];
 
@@ -520,8 +529,176 @@
             if (!target) { return; }
             var id = target.getAttribute('data-heart-id');
             if (!id) { return; }
+            /* Caso especial: el corazón del footer dispara primero la animación
+               de lluvia (definida en scripts.js). La recolección + vuelo hacia el
+               contador se ejecuta DESPUÉS de la lluvia, vía el evento
+               'heartrain:done' (ver bindHeartRainWatcher). Así las dos animaciones
+               se reproducen en secuencia y no a la vez. */
+            if (id === 'footer') { return; }
+
+            /* Caso especial: el corazón de la abuela ejecuta una secuencia de
+               tres fases (vibración crescendo del slide → explosión de corazones
+               → vuelo al contador) ANTES de recolectarse oficialmente. Ver
+               runGrandmaSequence(). */
+            if (id === 'abuela') {
+                if (isCollected('abuela')) { return; }
+                if (target.classList.contains('is-collecting')) { return; }
+                target.classList.add('is-collecting');
+                runGrandmaSequence(target);
+                return;
+            }
+
             var rect = target.getBoundingClientRect();
             collect(id, rect);
+
+            /* Corazones flotantes sobre fotos (.hq-photo-heart): al recolectarlos
+               desaparecen con un fade-out y se eliminan del DOM, para que la foto
+               quede limpia. La clase .is-collected dispara la transición CSS. */
+            if (target.classList && target.classList.contains('hq-photo-heart')) {
+                target.classList.add('is-collected');
+                target.setAttribute('aria-hidden', 'true');
+                target.style.pointerEvents = 'none';
+                setTimeout(function () {
+                    if (target.parentNode) { target.parentNode.removeChild(target); }
+                }, 450);
+            }
+        });
+    }
+
+    /* ═══════════════════════════════════════════
+       SECUENCIA ESPECIAL — CORAZÓN DE LA ABUELA
+       ───────────────────────────────────────────
+       Tres fases estrictamente secuenciales (total 2000 ms):
+       ① 0-700 ms    → vibración crescendo lineal del slide entero
+       ② 700-1300 ms → explosión de 18 corazones desde el corazón pequeño
+       ③ 1300-2000 ms → vuelo al contador + slide volviendo a tamaño normal
+       Variante elegida: «Alt A · Crescendo lineal» (demo v6).
+    ═══════════════════════════════════════════ */
+
+    var GRANDMA_T_SHAKE_END = 700;
+    var GRANDMA_T_BURST_END = 1300;
+    var GRANDMA_T_TOTAL = 2000;
+    var GRANDMA_BURST_COUNT = 18;
+
+    function runGrandmaSequence(heartButton) {
+        var slide = heartButton.closest('.slide');
+        if (!slide) {
+            /* Fallback: si por alguna razón no hay slide contenedor, recolectar
+               el corazón con el flujo estándar (vuelo directo al contador). */
+            var fallbackRect = heartButton.getBoundingClientRect();
+            collect('abuela', fallbackRect);
+            heartButton.classList.add('is-collected');
+            return;
+        }
+
+        /* FASE 1 · vibración crescendo */
+        slide.classList.add('is-grandma-anim');
+
+        /* FASE 2 · explosión de corazones */
+        setTimeout(function () {
+            spawnGrandmaBurst(slide, heartButton);
+        }, GRANDMA_T_SHAKE_END);
+
+        /* FASE 3 · vuelo al contador (recolección oficial) */
+        setTimeout(function () {
+            var rect = heartButton.getBoundingClientRect();
+            collect('abuela', rect);
+            heartButton.classList.add('is-collected');
+            heartButton.setAttribute('aria-hidden', 'true');
+            heartButton.style.pointerEvents = 'none';
+            setTimeout(function () {
+                if (heartButton.parentNode) { heartButton.parentNode.removeChild(heartButton); }
+            }, 700);
+        }, GRANDMA_T_BURST_END);
+
+        /* Cleanup: al final, quitar la clase de animación del slide */
+        setTimeout(function () {
+            slide.classList.remove('is-grandma-anim');
+        }, GRANDMA_T_TOTAL);
+    }
+
+    /** Lanza GRANDMA_BURST_COUNT corazones que explotan desde el centro del
+        corazón pequeño, vuelan en patrón radial y se desvanecen antes de que
+        empiece la fase 3. Como el slide está escalado durante la explosión,
+        las coordenadas del corazón se normalizan dividiendo por el factor de
+        escala para que los burst hearts queden bien anclados como hijos del
+        slide. */
+    function spawnGrandmaBurst(slide, heartButton) {
+        var burstDuration = (GRANDMA_T_BURST_END - GRANDMA_T_SHAKE_END) - 20;
+        var heartRect = heartButton.getBoundingClientRect();
+        var slideRect = slide.getBoundingClientRect();
+        var scaleX = slideRect.width  / slide.offsetWidth;
+        var scaleY = slideRect.height / slide.offsetHeight;
+        var ox = (heartRect.left + heartRect.width  / 2 - slideRect.left) / scaleX;
+        var oy = (heartRect.top  + heartRect.height / 2 - slideRect.top)  / scaleY;
+
+        for (var i = 0; i < GRANDMA_BURST_COUNT; i++) {
+            spawnGrandmaBurstHeart(slide, ox, oy, i, burstDuration);
+        }
+    }
+
+    function spawnGrandmaBurstHeart(slide, ox, oy, i, duration) {
+        var img = document.createElement('img');
+        img.src = HEART_IMG;
+        img.className = 'hq-burst-heart';
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        var size = 16 + Math.random() * 14;
+        img.style.width  = size + 'px';
+        img.style.height = size + 'px';
+        img.style.left = (ox - size / 2) + 'px';
+        img.style.top  = (oy - size / 2) + 'px';
+        slide.appendChild(img);
+
+        var angle = (i / GRANDMA_BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        var dist = 90 + Math.random() * 110;
+        var endX = Math.cos(angle) * dist;
+        var endY = Math.sin(angle) * dist - 25;
+        var rot = (Math.random() - 0.5) * 360;
+
+        if (typeof img.animate === 'function') {
+            img.animate([
+                { transform: 'translate(0,0) scale(0.4) rotate(0)', opacity: 0 },
+                { transform: 'translate(0,0) scale(1.1) rotate(' + (rot / 4) + 'deg)', opacity: 1, offset: 0.18 },
+                { transform: 'translate(' + endX + 'px,' + (endY - 20) + 'px) scale(1) rotate(' + (rot / 2) + 'deg)', opacity: 1, offset: 0.65 },
+                { transform: 'translate(' + (endX * 1.15) + 'px,' + (endY + 80) + 'px) scale(0.6) rotate(' + rot + 'deg)', opacity: 0 }
+            ], {
+                duration: duration,
+                easing: 'cubic-bezier(.2,.6,.4,1)',
+                fill: 'forwards'
+            }).onfinish = function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            };
+        } else {
+            /* Fallback sin Web Animations API: simplemente desaparece al final */
+            setTimeout(function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            }, duration);
+        }
+    }
+
+    /** Oculta los corazones flotantes sobre fotos que ya hayan sido recolectados
+        en visitas anteriores. Se ejecuta al cargar la página para que un corazón
+        que ya está en el contador no vuelva a aparecer sobre la foto. */
+    function hideCollectedPhotoHearts() {
+        var nodes = document.querySelectorAll('.hq-photo-heart[data-heart-id]');
+        for (var i = 0; i < nodes.length; i++) {
+            var id = nodes[i].getAttribute('data-heart-id');
+            if (id && isCollected(id) && nodes[i].parentNode) {
+                nodes[i].parentNode.removeChild(nodes[i]);
+            }
+        }
+    }
+
+    /** Escucha el evento que lanza scripts.js cuando la lluvia de corazones del
+        footer ha terminado. En ese momento, y solo entonces, recolectamos el
+        corazón "footer" para que el corazón vuele hacia el contador después de
+        la lluvia (en vez de simultáneamente). */
+    function bindHeartRainWatcher() {
+        document.addEventListener('heartrain:done', function (e) {
+            if (isCollected('footer')) { return; }
+            var rect = (e && e.detail && e.detail.rect) || null;
+            collect('footer', rect);
         });
     }
 
@@ -529,18 +706,31 @@
         var overlay = document.getElementById('successOverlay');
         if (!overlay) { return; }
 
+        /* La recolección se dispara cuando el overlay se CIERRA (deja de estar
+           activo), no al abrirse. El corazón sale del icono ♥ que vive dentro
+           del label "Mensaje (dime algo bonito ♥)" y vuela hasta el contador.
+           Si por algún motivo el icono no existe (futuras refactorizaciones),
+           caemos a un origen central de pantalla como fallback. */
         var wasActive = overlay.classList.contains('active');
         var observer = new MutationObserver(function () {
             var nowActive = overlay.classList.contains('active');
-            if (nowActive && !wasActive) {
-                var rect = {
-                    left: window.innerWidth / 2 - 12,
-                    top:  window.innerHeight / 2 - 12,
-                    width: 24, height: 24,
-                    right: window.innerWidth / 2 + 12,
-                    bottom: window.innerHeight / 2 + 12
-                };
-                setTimeout(function () { collect('mensaje', rect); }, 1200);
+            if (wasActive && !nowActive && !isCollected('mensaje')) {
+                var origin = document.getElementById('msgHeart');
+                var rect;
+                if (origin) {
+                    rect = origin.getBoundingClientRect();
+                } else {
+                    rect = {
+                        left: window.innerWidth / 2 - 12,
+                        top:  window.innerHeight / 2 - 12,
+                        width: 24, height: 24,
+                        right: window.innerWidth / 2 + 12,
+                        bottom: window.innerHeight / 2 + 12
+                    };
+                }
+                /* Pequeño delay para que la transición de fade-out del overlay
+                   (~500ms) termine antes de que el corazón salga volando. */
+                setTimeout(function () { collect('mensaje', rect); }, 550);
             }
             wasActive = nowActive;
         });
@@ -566,7 +756,11 @@
     ═══════════════════════════════════════════ */
 
     window.HeartQuest = {
-        collect: function (id) { collect(id, null); },
+        /* originRect opcional: si se pasa, el corazón vuela desde ese rect
+           hasta el contador en lugar de aparecer en el centro del viewport.
+           Lo usa scripts.js (mamá burst) para retrasar la recolección hasta
+           que termine el burst y aún así volar desde la palabra «mamá». */
+        collect: function (id, originRect) { collect(id, originRect || null); },
         getCollected: function () { return state.collected.slice(); },
         getTotal: function () { return HEARTS.length; },
         reset: function () {
@@ -604,6 +798,8 @@
         bindCounterTriggers();
         bindClickListener();
         bindSuccessOverlayWatcher();
+        bindHeartRainWatcher();
+        hideCollectedPhotoHearts();
 
         window.addEventListener('resize', function () {
             if (panelEl && panelEl.classList.contains('is-open')) { positionPanel(); }

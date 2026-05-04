@@ -1409,6 +1409,26 @@
                 setTimeout(function () {
                     rainBusy = false;
                     while (rainOverlay.firstChild) { rainOverlay.removeChild(rainOverlay.firstChild); }
+
+                    /* Notificar a Heart Quest: ahora puede ejecutar la animación
+                       de vuelo del corazón hacia el contador. Se hace AQUÍ, al
+                       finalizar la lluvia, para que primero termine la lluvia y
+                       después arranque el vuelo (en vez de a la vez). */
+                    try {
+                        var endRect = heartEl.getBoundingClientRect();
+                        document.dispatchEvent(new CustomEvent('heartrain:done', {
+                            detail: {
+                                rect: {
+                                    left:   endRect.left,
+                                    top:    endRect.top,
+                                    width:  endRect.width,
+                                    height: endRect.height,
+                                    right:  endRect.right,
+                                    bottom: endRect.bottom
+                                }
+                            }
+                        }));
+                    } catch (e) { /* navegadores muy antiguos sin CustomEvent */ }
                 }, (RAIN_TOTAL * RAIN_STAGGER) + duration + 200);
             });
         }
@@ -1417,6 +1437,130 @@
            El corazón vive directamente en el HTML (.heart-pop), siempre visible
            y palpitando por sí solo (animación heartbeat). El click en "mamá"
            sigue colectando el corazón en Heart Quest gracias al data-heart-id="mama". */
+
+        /* ═══════════════════════════════════════════
+           9. MAMÁ — BURST DE CORAZONES AL CLIC
+           ────────────────────────────────────────────
+           Cada vez que el visitante pulsa la palabra "mamá" o el corazón a su
+           lado, se dispara un "burst" de mini-corazones que irradia en todas
+           direcciones desde el propio elemento. Funciona en TODOS los clics
+           (no solo el primero) para que la palabra siga siendo divertida de
+           pulsar. Convive con la animación de recolección del Heart Quest
+           (data-heart-id="mama"): la primera vez, además del burst, un
+           corazón vuela hasta el contador del header.
+        ═══════════════════════════════════════════ */
+
+        var mamaTrigger = document.getElementById('mama-trigger');
+        var mamaHeart   = document.getElementById('mama-heart');
+
+        if (mamaTrigger || mamaHeart) {
+            var BURST_HEART_SRC = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg';
+            var BURST_COUNT     = 14;
+            var BURST_MIN_DIST  = 55;
+            var BURST_MAX_DIST  = 130;
+            var BURST_MIN_SIZE  = 12;
+            var BURST_MAX_SIZE  = 22;
+            var BURST_DURATION  = 850;
+
+            var burstReducedMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function fireMamaBurst(e) {
+                if (burstReducedMotion) { return; }
+                var anchor = mamaTrigger || mamaHeart;
+                var rect = anchor.getBoundingClientRect();
+                var cx = rect.left + rect.width  / 2;
+                var cy = rect.top  + rect.height / 2;
+
+                /* Detener la propagación: así el listener delegado de Heart Quest
+                   (en `document`) NO recoge el corazón inmediatamente. Lo lanzaremos
+                   manualmente al finalizar el burst para que el orden sea:
+                       1. Burst de corazones radial
+                       2. Corazón único volando hasta el contador (solo la 1ª vez). */
+                if (e && typeof e.stopPropagation === 'function') {
+                    e.stopPropagation();
+                }
+
+                /* Pulso rápido del corazón propio para acompañar el burst */
+                if (mamaHeart) {
+                    mamaHeart.classList.remove('heart-click-pulse');
+                    void mamaHeart.offsetWidth;
+                    mamaHeart.classList.add('heart-click-pulse');
+                    setTimeout(function () {
+                        if (mamaHeart) { mamaHeart.classList.remove('heart-click-pulse'); }
+                    }, 350);
+                }
+
+                for (var i = 0; i < BURST_COUNT; i++) {
+                    spawnMamaBurstHeart(cx, cy, i);
+                }
+
+                /* Encadena la recolección de Heart Quest al terminar el burst.
+                   - La primera pulsación: vuela el corazón al contador.
+                   - Pulsaciones posteriores: HeartQuest.collect() detecta que ya
+                     está recolectado e ignora la llamada (sin efecto visible).
+                   El delay = duración total del burst (animación + último delay
+                   escalonado) + un pequeño margen para que el burst se haya
+                   desvanecido por completo antes de que arranque el vuelo. */
+                var burstTotalMs = BURST_DURATION + (BURST_COUNT - 1) * 8 + 40;
+                setTimeout(function () {
+                    if (!window.HeartQuest || typeof window.HeartQuest.collect !== 'function') {
+                        return;
+                    }
+                    /* Recapturamos el rect por si el viewport ha hecho scroll
+                       o ha cambiado de tamaño durante el burst. */
+                    var freshRect = rect;
+                    try { freshRect = anchor.getBoundingClientRect(); } catch (err) {}
+                    window.HeartQuest.collect('mama', freshRect);
+                }, burstTotalMs);
+            }
+
+            function spawnMamaBurstHeart(cx, cy, idx) {
+                var size  = BURST_MIN_SIZE + Math.random() * (BURST_MAX_SIZE - BURST_MIN_SIZE);
+                /* Reparto angular uniforme con jitter para que no parezca un patrón rígido */
+                var slice = (Math.PI * 2) / BURST_COUNT;
+                var angle = slice * idx + (Math.random() - 0.5) * slice * 0.7;
+                var dist  = BURST_MIN_DIST + Math.random() * (BURST_MAX_DIST - BURST_MIN_DIST);
+                var dx    = Math.cos(angle) * dist;
+                var dy    = Math.sin(angle) * dist;
+                var rot   = (Math.random() * 90 - 45);
+                var delay = idx * 8;
+
+                var img = document.createElement('img');
+                img.src = BURST_HEART_SRC;
+                img.alt = '';
+                img.className = 'mama-burst-heart';
+                img.setAttribute('aria-hidden', 'true');
+                img.style.width  = size + 'px';
+                img.style.height = size + 'px';
+                img.style.left   = (cx - size / 2) + 'px';
+                img.style.top    = (cy - size / 2) + 'px';
+                document.body.appendChild(img);
+
+                if (typeof img.animate === 'function') {
+                    img.animate([
+                        { transform: 'translate(0,0) scale(0.3) rotate(0deg)', opacity: 0 },
+                        { transform: 'translate(' + (dx * 0.18) + 'px,' + (dy * 0.18) + 'px) scale(1.15) rotate(' + (rot * 0.3) + 'deg)', opacity: 1, offset: 0.18 },
+                        { transform: 'translate(' + (dx * 0.85) + 'px,' + (dy * 0.85) + 'px) scale(0.9) rotate(' + (rot * 0.8) + 'deg)', opacity: 0.85, offset: 0.7 },
+                        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.45) rotate(' + rot + 'deg)', opacity: 0 }
+                    ], {
+                        duration: BURST_DURATION,
+                        delay: delay,
+                        easing: 'cubic-bezier(.22,.8,.32,1)',
+                        fill: 'forwards'
+                    }).onfinish = function () {
+                        if (img.parentNode) { img.parentNode.removeChild(img); }
+                    };
+                } else {
+                    /* Fallback sin Web Animations API: borrado tras la duración */
+                    setTimeout(function () { if (img.parentNode) { img.remove(); } },
+                               BURST_DURATION + delay);
+                }
+            }
+
+            if (mamaTrigger) { mamaTrigger.addEventListener('click', fireMamaBurst); }
+            if (mamaHeart)   { mamaHeart.addEventListener('click', fireMamaBurst); }
+        }
 
     }); // FIN DOMContentLoaded
 

@@ -1331,6 +1331,7 @@ input[type="tel"] {
     box-sizing: border-box;
     overflow-x: hidden;
     scroll-snap-type: none;
+    margin-bottom: 64px;   /* aire entre la galería y "Otros álbumes" */
 }
 
 .is-gallery .slide {
@@ -1354,11 +1355,6 @@ input[type="tel"] {
 .is-gallery .slide img:hover {
     transform: scale(1.05);
     filter: brightness(0.9);
-}
-
-.is-gallery::after {
-    content: "";
-    flex-grow: 1000;
 }
 
 /* ═══════════════════════════════════════════
@@ -1643,6 +1639,23 @@ input[type="tel"] {
    El corazón es el siguiente hermano inmediato del .mama-heart-trigger. */
 .mama-heart-trigger:hover + .heart-pop {
     filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
+}
+
+/* Burst de corazones al hacer clic en "mamá".
+   Cada corazón se posiciona en coordenadas viewport (position: fixed)
+   y la animación se controla desde JS (Web Animations API). */
+.mama-burst-heart {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9000;
+    will-change: transform, opacity;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 0 3px rgba(231, 76, 60, 0.45));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mama-burst-heart { display: none !important; }
 }
 
 @media (max-width: 1400px) {

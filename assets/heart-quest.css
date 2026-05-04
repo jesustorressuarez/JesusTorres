@@ -333,7 +333,106 @@
 }
 
 /* =========================
-   3. CORAZÓN VOLADOR
+   3. CORAZÓN FLOTANTE SOBRE FOTOS
+   ─────────────────────────────────────────
+   Botón decorativo sobre la imagen de un slide concreto (p. ej. la foto de
+   la abuela en /photos/favoritas.html). Late, brilla en hover y al hacer
+   clic se desvanece tras volar al contador del header.
+========================= */
+
+/* El slide que aloja un corazón flotante necesita ser stacking context
+   para que el botón se posicione sobre la foto. */
+.slide.has-photo-heart { position: relative; }
+
+.hq-photo-heart {
+  position: absolute;
+  /* Centrado horizontal en la parte inferior de la foto */
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: none;
+  border: none;
+  padding: 6px;        /* hit area cómoda sin agrandar el corazón visible */
+  margin: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  z-index: 2;
+  /* La transición controla el fade-out al recolectar (.is-collected) */
+  transition: opacity .35s ease, transform .35s ease;
+  will-change: transform, opacity;
+}
+
+/* CRÍTICO: usar selector específico + !important para sobreescribir
+   `.is-gallery .slide img { width:100% !important; height:100% !important }`
+   de styles.css, que afectaría también al <img> del corazón. */
+.hq-photo-heart img,
+.is-gallery .slide .hq-photo-heart img {
+  /* Mismo tamaño que el corazón "pop" de la palabra «mamá» (.heart-pop). */
+  width: 22px !important;
+  height: 22px !important;
+  display: block;
+  object-fit: contain !important;  /* anula el object-fit: cover heredado */
+  border-radius: 0 !important;     /* anula el border-radius heredado */
+  transform-origin: center center;
+  animation: heartbeat 1.8s ease-in-out infinite;
+  /* Sombra suave para que destaque sobre fotos claras u oscuras */
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+  transition: filter 0.18s ease, transform 0.18s ease;
+  pointer-events: none;  /* el click viaja al botón padre */
+  cursor: default;       /* anula el cursor: pointer heredado de .slide img */
+}
+
+/* Nota: `.is-gallery .slide img:hover { transform: scale(1.05); filter: brightness(0.9) }`
+   no afecta al corazón porque su <img> tiene pointer-events: none → el :hover
+   nunca se dispara sobre él (pasa al botón padre). */
+
+/* Iluminación en hover — mismo lenguaje visual que .heart-beat del footer
+   y que el icono del contador.
+   IMPORTANTE: replicamos el selector `.is-gallery .slide ...` para igualar
+   la especificidad de la regla base (0,3,1); de lo contrario, los filter
+   declarados ahí (drop-shadow gris) ganan y el rojo nunca se aplica. */
+.hq-photo-heart:hover img,
+.hq-photo-heart:focus-visible img,
+.is-gallery .slide .hq-photo-heart:hover img,
+.is-gallery .slide .hq-photo-heart:focus-visible img {
+  filter:
+    drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35))
+    brightness(1.3)
+    drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
+}
+
+.hq-photo-heart:focus-visible {
+  outline: 2px solid var(--General-400, #262626);
+  outline-offset: 2px;
+}
+
+.hq-photo-heart:active img {
+  transform: scale(0.92);
+}
+
+/* Estado al recolectar: fade-out + ligero salto antes de eliminarse del DOM */
+.hq-photo-heart.is-collected {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.6);
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .hq-photo-heart { bottom: 10px; padding: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hq-photo-heart img { animation: none; }
+}
+
+/* =========================
+   4. CORAZÓN VOLADOR
 ========================= */
 
 .hq-flying-heart {
@@ -348,7 +447,75 @@
 }
 
 /* =========================
-   4. RESPONSIVE
+   4b. SECUENCIA "CORAZÓN DE LA ABUELA"
+   ─────────────────────────────────────────
+   Variante: «Alt A · Crescendo lineal» (demo v6).
+   Tres fases secuenciales (total 2000 ms):
+     ① 0-700 ms   → vibración crescendo lineal del slide entero
+     ② 700-1300 ms → explosión de 18 corazones (.hq-burst-heart)
+     ③ 1300-2000 ms → vuelo al contador + slide volviendo a tamaño normal
+   El slide desactiva su overflow para permitir que la explosión y la propia
+   foto ampliada se sobrepongan a las celdas vecinas del grid.
+========================= */
+
+.slide.is-grandma-anim {
+  z-index: 50;
+  overflow: visible !important;
+  transform-origin: center center;
+  animation: hq-grandma-shake 2000ms linear both;
+}
+
+@keyframes hq-grandma-shake {
+  /* FASE 1 · Crescendo lineal (0% → 35%, 14 oscilaciones) */
+  0%    { transform: scale(1.000) translate(0, 0)            rotate(0); }
+  2.5%  { transform: scale(1.007) translate(-0.2px, 0.1px)   rotate(-0.04deg); }
+  5%    { transform: scale(1.014) translate(0.4px, -0.2px)   rotate(0.07deg); }
+  7.5%  { transform: scale(1.021) translate(-0.6px, 0.3px)   rotate(-0.11deg); }
+  10%   { transform: scale(1.029) translate(0.9px, -0.5px)   rotate(0.14deg); }
+  12.5% { transform: scale(1.036) translate(-1.1px, 0.7px)   rotate(-0.18deg); }
+  15%   { transform: scale(1.043) translate(1.4px, -0.9px)   rotate(0.21deg); }
+  17.5% { transform: scale(1.050) translate(-1.6px, 1.0px)   rotate(-0.25deg); }
+  20%   { transform: scale(1.057) translate(1.9px, -1.2px)   rotate(0.29deg); }
+  22.5% { transform: scale(1.064) translate(-2.1px, 1.4px)   rotate(-0.32deg); }
+  25%   { transform: scale(1.071) translate(2.4px, -1.6px)   rotate(0.36deg); }
+  27.5% { transform: scale(1.079) translate(-2.6px, 1.7px)   rotate(-0.39deg); }
+  30%   { transform: scale(1.086) translate(2.8px, -1.9px)   rotate(0.43deg); }
+  32.5% { transform: scale(1.093) translate(-3px, 2px)       rotate(-0.47deg); }
+  35%   { transform: scale(1.100) translate(3px, -2px)       rotate(0.50deg); }
+  /* FASE 2 · Pico estable (35% → 65%) — la foto se queda quieta mientras
+     explotan los corazones. */
+  37%   { transform: scale(1.100) translate(0, 0) rotate(0); }
+  65%   { transform: scale(1.100) translate(0, 0) rotate(0); }
+  /* FASE 3 · Vuelta (65% → 100%) — la foto encoge mientras vuela el corazón. */
+  100%  { transform: scale(1.000) translate(0, 0) rotate(0); }
+}
+
+/* Hover de la foto en la galería: durante la animación, anular el scale(1.05)
+   heredado de `.is-gallery .slide img:hover` para que no interfiera con el
+   crescendo. Como la regla heredada tiene especificidad (0,3,1), igualamos. */
+.is-gallery .slide.is-grandma-anim img:hover {
+  transform: none;
+  filter: none;
+}
+
+/* Corazones de la explosión (se generan dinámicamente desde JS como hijos
+   del slide). Quedan absolutamente posicionados sobre la foto y heredan la
+   transformación del slide durante la fase 2. */
+.hq-burst-heart {
+  position: absolute;
+  pointer-events: none;
+  z-index: 60;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide.is-grandma-anim { animation: none !important; }
+  .hq-burst-heart { display: none !important; }
+}
+
+/* =========================
+   5. RESPONSIVE
 ========================= */
 
 @media (max-width: 768px) {
