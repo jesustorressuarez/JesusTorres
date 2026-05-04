@@ -1413,25 +1413,10 @@
             });
         }
 
-        // --- Corazón POP en "mamá" (photos.html) ---
-        var mamaTrigger = document.getElementById('mama-trigger');
-        var mamaSlot    = document.getElementById('mama-heart-slot');
-
-        if (mamaTrigger && mamaSlot) {
-            mamaTrigger.addEventListener('click', function () {
-                mamaSlot.innerHTML = '';
-
-                requestAnimationFrame(function () {
-                    var img  = document.createElement('img');
-                    img.src  = 'https://em-content.zobj.net/source/apple/453/red-heart_2764-fe0f.png';
-                    img.alt  = '❤️';
-                    img.width  = 22;
-                    img.height = 22;
-                    img.className = 'heart-pop';
-                    mamaSlot.appendChild(img);
-                });
-            });
-        }
+        /* --- Corazón junto a "mamá" (photos.html) ---
+           El corazón vive directamente en el HTML (.heart-pop), siempre visible
+           y palpitando por sí solo (animación heartbeat). El click en "mamá"
+           sigue colectando el corazón en Heart Quest gracias al data-heart-id="mama". */
 
     }); // FIN DOMContentLoaded
 
