@@ -1,0 +1,387 @@
+/* =========================================================
+   HEART QUEST — Sistema de "caza de corazones"
+   ─────────────────────────────────────────────────────────
+   Diseño minimalista, alineado con el resto de la web:
+   - Sin marcos coloreados
+   - Esquinas rectas (border-radius: 0) como .lang-tooltip
+   - Tipografía y paleta del lang-selector
+   - Solo el rojo del emoji corazón aporta color
+   ========================================================= */
+
+/* =========================
+   1. CONTADOR (en header)
+========================= */
+
+.hq-counter {
+  /* Posición: pegado al logo (izquierda). El margin-right: auto empuja el
+     resto del header (lang-selector, burger) a la derecha. */
+  margin-left: 16px;
+  margin-right: auto;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  background: none;
+  border: none;
+  padding: 0;
+
+  /* Mismo tipo de letra exacto que los idiomas no seleccionados (.lang-selector a) */
+  font-family: 'Inter', sans-serif;
+  font-size: 0.722rem;
+  font-weight: var(--text-regular, 400);
+  color: var(--General-200, #8D8D8D);
+  letter-spacing: -0.52px;
+  line-height: 1;
+  white-space: nowrap;
+
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  transition: color .3s ease-in-out, transform .15s ease;
+}
+
+.hq-counter:hover { color: var(--General-400, #262626); }
+.hq-counter:active { transform: scale(0.97); }
+
+/* Desktop con hover: el contador NO es clicable, solo hover.
+   Quitamos cursor: pointer y :active para que no parezca un botón. */
+@media (hover: hover) and (pointer: fine) {
+  .hq-counter { cursor: default; }
+  .hq-counter:active { transform: none; }
+}
+
+.hq-counter__num   { font-variant-numeric: tabular-nums; }
+.hq-counter__icon  {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: filter 0.15s;
+}
+.hq-counter__label { /* "recolectados" — se oculta en mobile */ }
+
+/* Iluminación al hacer hover sobre el contador (mismo efecto que el corazón
+   del footer, .heart-beat). Aplica al icono cuando se pasa el ratón por el
+   contador completo, ya que el icono vive dentro del botón. */
+.hq-counter:hover .hq-counter__icon {
+  filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
+}
+
+/* (Las reglas de margin-left para .lang-selector / .burger se han eliminado:
+   ahora el contador usa margin-right: auto, que ya empuja correctamente
+   el resto de elementos del header a la derecha sin necesidad de gap extra) */
+
+/* Pulse al sumar +1 */
+@keyframes hq-counter-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.hq-counter.is-pulsing {
+  animation: hq-counter-pulse 0.45s ease;
+}
+
+/* Estado completo: solo cambia el peso del texto, sin colorines */
+.hq-counter.is-complete {
+  color: var(--General-400, #262626);
+  font-weight: var(--text-extrabold, 800);
+}
+
+/* =========================
+   2. DESPLEGABLE / PANEL
+========================= */
+
+.hq-panel {
+  position: fixed;
+  top: 64px;            /* recalculado desde JS al abrir */
+  left: 16px;           /* alineado a la izquierda (sigue al contador) */
+  z-index: 9999;
+
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+
+  background: var(--General-100, #f2f2f2);
+  border-radius: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  /* Padding-top extra para hacer espacio al botón close (absolute) */
+  padding: 18px 18px 16px;
+
+  font-family: 'Inter', sans-serif;
+  color: var(--General-300, #5B5A5A);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity .22s ease, transform .22s ease, visibility .22s ease;
+}
+
+.hq-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Botón cerrar — solo aparece en la vista 'help' (cuando .hq-panel.is-help).
+   En la vista intro no se muestra: el panel se cierra solo al sacar el cursor. */
+.hq-panel__close {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--General-200, #8D8D8D);
+  cursor: pointer;
+  padding: 4px 6px;
+  transition: color .3s ease-in-out;
+}
+
+.hq-panel.is-help .hq-panel__close { display: block; }
+.hq-panel__close:hover { color: var(--General-400, #262626); }
+
+/* Texto de instrucción (vista intro del panel) — SE MANTIENE SU LOOK */
+.hq-panel__intro {
+  margin: 0 0 16px;
+  font-size: 0.722rem;
+  line-height: 1.55;
+  letter-spacing: -0.3px;
+  color: var(--General-300, #5B5A5A);
+}
+
+/* Corazón Twemoji que late dentro del texto (sustituye la palabra "corazones") */
+.hq-heart-inline {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin: 0 1px;
+  transform-origin: center center;
+  animation: heartbeat 1.8s ease-in-out infinite;
+  transition: filter 0.15s;
+}
+
+/* Iluminación al hacer hover sobre el corazón inline (mismo efecto que .heart-beat) */
+.hq-heart-inline:hover {
+  filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
+}
+
+/* ─────────────────────────────────────────────
+   Underline animado (truco del .cta_form, sutil)
+   - Línea de 1px que crece de izquierda a derecha en hover
+   - Reutilizado en "Pedir ayuda" y "Pedir pista"
+   ───────────────────────────────────────────── */
+.hq-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0 0 2px;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.3px;
+  color: var(--General-400, #262626);
+  cursor: pointer;
+  /* Línea que crece en hover */
+  background-image: linear-gradient(var(--General-400, #262626), var(--General-400, #262626));
+  background-position: left bottom;
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  transition: background-size .35s ease;
+}
+
+.hq-link:hover:not(:disabled) {
+  background-size: 100% 1px;
+}
+
+.hq-link:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Botón principal "Pedir ayuda" — gris claro, con underline animado */
+.hq-panel__help-btn {
+  font-size: 0.833rem;
+  font-weight: var(--text-extrabold, 800);
+  margin-top: 2px;
+  /* Override del .hq-link: gris en vez de negro, con línea gris también */
+  color: var(--General-200, #8D8D8D);
+  background-image: linear-gradient(var(--General-200, #8D8D8D), var(--General-200, #8D8D8D));
+}
+
+.hq-panel__help-btn:hover:not(:disabled) {
+  color: var(--General-400, #262626);
+  background-image: linear-gradient(var(--General-400, #262626), var(--General-400, #262626));
+}
+
+/* ─────────────────────────────────────────────
+   VISTA HELP — cabecera + lista numerada con toggle +/-
+   ───────────────────────────────────────────── */
+
+.hq-panel__help-header {
+  margin: 0 0 12px;
+  font-size: 0.722rem;
+  line-height: 1.45;
+  letter-spacing: -0.3px;
+  color: var(--General-300, #5B5A5A);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--General-150, #dadada);
+}
+
+.hq-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hq-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--General-150, #dadada);
+}
+
+.hq-item:last-child { border-bottom: none; padding-bottom: 4px; }
+
+.hq-item__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* Marcador izquierdo: número (1.) o tick ✓ si encontrado */
+.hq-item__marker {
+  flex-shrink: 0;
+  width: 18px;
+  font-size: 0.722rem;
+  font-weight: var(--text-regular, 400);
+  color: var(--General-200, #8D8D8D);
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hq-item__marker--check {
+  color: var(--General-400, #262626);
+  font-weight: var(--text-extrabold, 800);
+  font-size: 0.833rem;
+  line-height: 1;
+}
+
+/* Título — siempre regular (incluso encontrado, según pidió el usuario) */
+.hq-item__title {
+  flex: 1;
+  font-size: 0.778rem;
+  letter-spacing: -0.4px;
+  color: var(--General-400, #262626);
+  font-weight: var(--text-regular, 400);
+}
+
+/* Botón +/- — discreto, gris, hover oscuro */
+.hq-item__toggle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 0 4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  font-weight: var(--text-regular, 400);
+  line-height: 1;
+  color: var(--General-200, #8D8D8D);
+  cursor: pointer;
+  transition: color .25s ease;
+}
+
+.hq-item__toggle:hover { color: var(--General-400, #262626); }
+
+/* Lista de pistas reveladas (ol numerada con padding) */
+.hq-item__hints {
+  margin: 8px 0 0;
+  padding: 0 0 0 26px;  /* alinea con el inicio del título (después del marcador) */
+  font-size: 0.722rem;
+  line-height: 1.5;
+  color: var(--General-300, #5B5A5A);
+  letter-spacing: -0.3px;
+  list-style: decimal;
+  animation: hq-hint-in .25s ease;
+}
+
+.hq-item__hints li {
+  margin-bottom: 4px;
+}
+
+.hq-item__hints li:last-child { margin-bottom: 0; }
+
+/* Descripción del item encontrado (la última pista — cómo se consiguió) */
+.hq-item__desc {
+  margin: 6px 0 0;
+  padding-left: 26px;  /* alinea con el título */
+  font-size: 0.722rem;
+  line-height: 1.5;
+  color: var(--General-300, #5B5A5A);
+  letter-spacing: -0.3px;
+  font-style: italic;
+}
+
+@keyframes hq-hint-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================
+   3. CORAZÓN VOLADOR
+========================= */
+
+.hq-flying-heart {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  z-index: 10000;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* =========================
+   4. RESPONSIVE
+========================= */
+
+@media (max-width: 768px) {
+  .hq-counter {
+    font-size: 0.667rem;
+    gap: 5px;
+    margin-left: 12px;
+  }
+
+  .hq-counter__icon {
+    width: 11px;
+    height: 11px;
+  }
+
+  /* En mobile la palabra "recolectados" se oculta; queda solo "X/Y ❤" */
+  .hq-counter__label { display: none; }
+
+  .hq-panel {
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* Respeta reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .hq-counter,
+  .hq-panel,
+  .hq-flying-heart,
+  .hq-item__hints {
+    animation: none !important;
+    transition: none !important;
+  }
+}

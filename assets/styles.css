@@ -423,7 +423,15 @@ html.lenis, html.lenis body {
     transition: filter 0.15s;
 }
 
-.heart-beat:hover {
+/* Iluminación al hacer hover sobre CUALQUIER corazón de la web.
+   Mantenemos el mismo efecto del footer (.heart-beat) en:
+   - el corazón "pop" de mamá (.heart-pop, photos.html)
+   - el icono del contador Heart Quest del header (.hq-counter:hover .hq-counter__icon)
+   - el corazón inline del panel Heart Quest (.hq-heart-inline:hover)
+   - el corazón volador (.hq-flying-heart) — por consistencia
+   Las reglas para los .hq-* viven en heart-quest.css */
+.heart-beat:hover,
+.heart-pop:hover {
     filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
 }
 
@@ -1616,23 +1624,25 @@ input[type="tel"] {
     }
 }
 
-/* --- Corazón POP en "mamá" (photos.html) --- */
+/* --- Corazón junto a "mamá" (photos.html) ---
+   El corazón está siempre visible y palpita en bucle por sí solo.
+   Hover sobre el corazón O sobre la palabra "mamá" lo ilumina. */
 .mama-heart-trigger { cursor: pointer; }
 
 .heart-pop {
     display: inline-block;
     vertical-align: -3px;
     margin-left: 4px;
-    opacity: 0;
-    animation: popBounce 0.5s cubic-bezier(.17,.67,.35,1.5) forwards;
+    transform-origin: center center;
+    cursor: pointer;
+    transition: filter 0.15s;
+    animation: heartbeat 1.8s ease-in-out infinite;
 }
 
-@keyframes popBounce {
-    0%   { transform: scale(0); opacity: 0; }
-    50%  { transform: scale(1.5); opacity: 1; }
-    70%  { transform: scale(0.85); }
-    85%  { transform: scale(1.15); }
-    100% { transform: scale(1); opacity: 1; }
+/* Iluminar el corazón cuando se pasa el cursor por la palabra "mamá".
+   El corazón es el siguiente hermano inmediato del .mama-heart-trigger. */
+.mama-heart-trigger:hover + .heart-pop {
+    filter: brightness(1.3) drop-shadow(0 0 4px rgba(231, 76, 60, 0.5));
 }
 
 @media (max-width: 1400px) {

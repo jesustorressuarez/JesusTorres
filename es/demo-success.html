@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- SEO -->
     <meta name="author" content="Jesús Torres Suárez">
-    <meta name="robots" content="index, follow">
+    <!-- Demo: noindex (la meta definitiva está más abajo) -->
     <link rel="canonical" href="https://jesustorressuarez.github.io/JesusTorres/es/contact.html">
     <!-- Open Graph -->
     <meta property="og:type" content="website">
@@ -20,8 +20,9 @@
     <meta name="twitter:title" content="Jesús Torres Suárez | Contacto">
     <meta name="twitter:description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
     <meta name="twitter:image" content="https://jesustorressuarez.github.io/JesusTorres/assets/img/jesus.avif">
-    <title>Jesús Torres Suárez | Contacto</title>
-    <meta name="description" content="Contacta con Jesús Torres Suárez — Arquitecto BIM. Escríbeme a través del formulario o por email.">
+    <title>DEMO · Animación de éxito (formulario)</title>
+    <meta name="description" content="Demo aislada de la animación que aparece al enviar el formulario de contacto.">
+    <meta name="robots" content="noindex, nofollow">
 
         <link rel="icon" type="image/png" href="../assets/img/favicon.png">
 
@@ -916,89 +917,24 @@
                 }
             });
 
-            /* ── Intercept form submit → send via fetch, then show overlay ── */
+            /* ── DEMO: el submit dispara la animación SIN validar ni enviar ── */
             var form = document.getElementById('contactForm');
             if (form) {
+                /* Quitar el atributo `required` de los inputs para que el navegador
+                   no muestre tooltips nativos de validación al enviar vacío. */
+                form.querySelectorAll('[required]').forEach(function (input) {
+                    input.removeAttribute('required');
+                });
+                /* Romper el `action` para evitar cualquier envío accidental. */
+                form.setAttribute('action', 'javascript:void(0)');
+
                 form.addEventListener('submit', function (e) {
-                    e.preventDefault(); // Siempre prevenir — enviamos via fetch
-
-                    /* ── Validación propia (no depender de otro listener) ── */
-                    var isValid = true;
-                    var requiredInputs = form.querySelectorAll('[required]');
-
-                    requiredInputs.forEach(function (input) {
-                        var group = input.closest('.input-group');
-                        var isEmpty = input.value.trim() === '';
-                        var isEmailInvalid = input.type === 'email'
-                            && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value);
-
-                        if (isEmpty || isEmailInvalid) {
-                            group.classList.add('error');
-                            isValid = false;
-                        } else {
-                            group.classList.remove('error');
-                        }
+                    e.preventDefault();
+                    /* Limpiar visualmente cualquier estado de error previo */
+                    form.querySelectorAll('.input-group').forEach(function (g) {
+                        g.classList.remove('error');
                     });
-
-                    // Teléfono: opcional, pero si se rellena debe tener prefijo + 9 cifras
-                    var telefono = document.getElementById('telefono');
-                    if (telefono) {
-                        var phoneGroup = telefono.closest('.input-group');
-                        var phoneError = document.getElementById('phoneError');
-                        var phoneVal = telefono.value.trim();
-
-                        if (phoneVal !== '') {
-                            var match = phoneVal.match(/^\+(\d{1,4})[\s\-]?(.*)$/);
-
-                            if (!phoneVal.startsWith('+')) {
-                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
-                                phoneGroup.classList.add('error');
-                                isValid = false;
-                            } else if (match) {
-                                var numberDigits = match[2].replace(/[^0-9]/g, '').length;
-                                if (numberDigits !== 9) {
-                                    phoneError.textContent = 'El número debe tener 9 cifras';
-                                    phoneGroup.classList.add('error');
-                                    isValid = false;
-                                } else {
-                                    phoneGroup.classList.remove('error');
-                                }
-                            } else {
-                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
-                                phoneGroup.classList.add('error');
-                                isValid = false;
-                            }
-                        } else {
-                            phoneGroup.classList.remove('error');
-                        }
-                    }
-
-                    if (!isValid) return; // No enviar si hay errores
-
-                    // Sincronizar _replyto
-                    var replytoInput = document.getElementById('replyto');
-                    var emailInput = document.getElementById('email');
-                    if (replytoInput && emailInput) {
-                        replytoInput.value = emailInput.value;
-                    }
-
-                    var formData = new FormData(form);
-
-                    fetch(form.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: { 'Accept': 'application/json' }
-                    }).then(function (response) {
-                        if (response.ok) {
-                            form.reset();
-                            form.querySelectorAll('.input-group').forEach(function (g) {
-                                g.classList.remove('error');
-                            });
-                            openSuccess();
-                        }
-                    }).catch(function () {
-                        /* Silently fail — the form was already validated */
-                    });
+                    openSuccess();
                 });
             }
         })();
