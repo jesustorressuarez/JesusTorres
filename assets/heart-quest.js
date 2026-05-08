@@ -62,6 +62,15 @@
                 'Búscalo entre mis fotografías favoritas',
                 'En la galería «Mis Favoritas», hay un corazón latiendo sobre la foto de mi abuela. Púlsalo.'
             ]
+        },
+        {
+            id: 'dialogo-dot',
+            title: 'Disfrazado entre puntos',
+            hints: [
+                'En uno de mis proyectos hay algo que no es lo que parece',
+                'Mira con atención los puntos de navegación de una galería de planos',
+                'En el carrusel del proyecto «Diálogo Generacional», el segundo punto es en realidad un corazón. Púlsalo.'
+            ]
         }
     ];
 
@@ -111,6 +120,8 @@
 
     var counterEl = null;
     var panelEl = null;
+    var toastEl = null;
+    var toastTimer = null;
     /** Vista actual del panel: 'intro' (frase + botón Ayuda) o 'help' (lista de corazones). */
     var panelView = 'intro';
     /** Estado UI por item (solo memoria, no persiste): qué items están expandidos en la vista help. */
@@ -149,9 +160,36 @@
 
         if (found === total) { btn.classList.add('is-complete'); }
 
+        /* Toast "+1! ... encontrado" — hijo absoluto del contador, queda a la
+           derecha. Visible solo durante la recolección (2 s). */
+        toastEl = document.createElement('span');
+        toastEl.className = 'hq-toast';
+        toastEl.setAttribute('aria-hidden', 'true');
+        btn.appendChild(toastEl);
+
         /* Listeners (hover y click) se añaden en bindCounterTriggers() desde init(). */
 
         return btn;
+    }
+
+    /** Muestra el toast con el mensaje  +1.  "<title>"  durante 4s.
+        - "+1." en negrita
+        - El título y sus comillas en cursiva
+        - Espacio garantizado con &nbsp; para que no lo colapse el navegador
+        Se llama justo cuando el corazón volador aterriza en el contador. */
+    function showToast(title) {
+        if (!toastEl || !title) { return; }
+        toastEl.innerHTML =
+            '<strong>+1.</strong>&nbsp;' +
+            '<em>&ldquo;' + escapeHtml(title) + '&rdquo;</em>';
+        toastEl.classList.remove('is-visible');
+        void toastEl.offsetWidth;          /* fuerza reflow para reiniciar la transición */
+        toastEl.classList.add('is-visible');
+        if (toastTimer) { clearTimeout(toastTimer); }
+        toastTimer = setTimeout(function () {
+            if (toastEl) { toastEl.classList.remove('is-visible'); }
+            toastTimer = null;
+        }, 3000);
     }
 
     /** Configura el trigger del panel:
@@ -471,6 +509,7 @@
 
         flyHeart(originRect, function () {
             refreshCounter(true);
+            showToast(heart.title);
             if (panelEl && panelEl.classList.contains('is-open')) {
                 renderPanel();
             }
@@ -536,15 +575,34 @@
                se reproducen en secuencia y no a la vez. */
             if (id === 'footer') { return; }
 
+            /* Caso especial: el corazón "dialogo-dot" del carrusel de
+               dialogogeneracional.html. Al click se "encierra" en una pompa
+               de jabón que asciende, estalla con anillo + chispas, y desde
+               ese punto vuela el corazón al contador. Tras el vuelo, el dot
+               vuelve a ser un punto de navegación normal. */
+            if (id === 'dialogo-dot') {
+                if (isCollected('dialogo-dot')) { return; }
+                if (target.classList.contains('is-collecting')) { return; }
+                target.classList.add('is-collecting');
+                runDialogoDotSequence(target);
+                return;
+            }
+
             /* Caso especial: el corazón de la abuela ejecuta una secuencia de
-               tres fases (vibración crescendo del slide → explosión de corazones
-               → vuelo al contador) ANTES de recolectarse oficialmente. Ver
-               runGrandmaSequence(). */
+               fases ANTES de recolectarse oficialmente. Hay dos contextos:
+               · galería (data-heart-context="gallery"): vibración crescendo +
+                 explosión + vuelo al contador (3 fases).
+               · modal (data-heart-context="modal"): solo explosión + vuelo
+                 (la foto ya está zoom; no hay shake). */
             if (id === 'abuela') {
                 if (isCollected('abuela')) { return; }
                 if (target.classList.contains('is-collecting')) { return; }
                 target.classList.add('is-collecting');
-                runGrandmaSequence(target);
+                if (target.getAttribute('data-heart-context') === 'modal') {
+                    runGrandmaModalSequence(target);
+                } else {
+                    runGrandmaSequence(target);
+                }
                 return;
             }
 
@@ -588,6 +646,7 @@
             var fallbackRect = heartButton.getBoundingClientRect();
             collect('abuela', fallbackRect);
             heartButton.classList.add('is-collected');
+            dismissAllGrandmaHearts(heartButton);
             return;
         }
 
@@ -606,6 +665,9 @@
             heartButton.classList.add('is-collected');
             heartButton.setAttribute('aria-hidden', 'true');
             heartButton.style.pointerEvents = 'none';
+            /* Quita los demás corazones de la abuela (p.ej. el del modal si
+               estuviera abierto) — el actual se anima y se borra después. */
+            dismissAllGrandmaHearts(heartButton);
             setTimeout(function () {
                 if (heartButton.parentNode) { heartButton.parentNode.removeChild(heartButton); }
             }, 700);
@@ -677,6 +739,483 @@
         }
     }
 
+    /* ═══════════════════════════════════════════
+       SECUENCIA "ABUELA" EN EL MODAL DE ZOOM
+       ───────────────────────────────────────────
+       Cuando se pulsa el corazón estando dentro del modal, NO hay vibración
+       (la foto ya está zoom). Solo se ejecutan dos fases:
+         ① 0-580 ms   → explosión de corazones desde el corazón pequeño
+         ② 580-1280 ms → vuelo al contador (recolección oficial)
+       Los burst hearts y el corazón volador se posicionan en el body con
+       z-index alto para quedar por encima del modal (z-index 9999).
+    ═══════════════════════════════════════════ */
+
+    var GRANDMA_MODAL_BURST_DURATION = 580;
+    var GRANDMA_SRC_TOKEN = 'IMG_4502';   // identifica la foto de la abuela por src
+
+    function runGrandmaModalSequence(heartButton) {
+        /* FASE 1 (saltada): no hay shake en el modal. */
+
+        /* Sube SOLO el contador (con su toast) por encima del overlay del
+           modal. El resto del header (logo, lang-selector...) sigue debajo.
+           Se baja al final, sincronizado con el fin del fade-out del toast. */
+        liftCounterAboveModal();
+
+        /* FASE 2 · explosión inmediata desde el corazón */
+        spawnGrandmaModalBurst(heartButton);
+
+        /* FASE 3 · vuelo al contador justo después de la explosión */
+        setTimeout(function () {
+            var rect = heartButton.getBoundingClientRect();
+            collect('abuela', rect);
+            heartButton.classList.add('is-collected');
+            heartButton.setAttribute('aria-hidden', 'true');
+            heartButton.style.pointerEvents = 'none';
+            /* Quita el corazón gemelo de la galería para que al cerrar el modal
+               no siga apareciendo sobre la foto. */
+            dismissAllGrandmaHearts(heartButton);
+            setTimeout(function () {
+                if (heartButton.parentNode) { heartButton.parentNode.removeChild(heartButton); }
+            }, 700);
+        }, GRANDMA_MODAL_BURST_DURATION);
+
+        /* Sincronizar el fade-out del contador con el del toast (1,5 s).
+           El toast inicia su fade-out a los ~4280 ms del click: 580 (burst)
+           + 700 (vuelo) + 3000 (visible). En ese mismo momento añadimos la
+           clase .hq-counter--fading para que el contador se desvanezca
+           junto al mensaje. */
+        setTimeout(function () {
+            if (counterEl) { counterEl.classList.add('hq-counter--fading'); }
+        }, 4280);
+
+        /* Bajar el contador tras: explosión (580) + vuelo (700) + entrada
+           del toast (250) + visible (3000) + fade-out (1500) ≈ 6030 ms.
+           Le damos un poco de margen para asegurar que el fade-out termine
+           antes de que el contador vuelva a quedar bajo el overlay. */
+        setTimeout(lowerCounterFromAboveModal, 6100);
+    }
+
+    /** Mueve temporalmente el contador a <body> con position: fixed, las
+        mismas coordenadas visuales y z-index alto, de modo que escape del
+        stacking context del <header> y quede por encima del overlay del
+        modal (z-index 9999). El resto del header (logo, lang-selector...)
+        sigue debajo del overlay. Para que el header no descomponga su
+        layout mientras el contador "flota", se inserta un placeholder
+        invisible con sus mismas dimensiones y márgenes. */
+    var counterStash = null;
+
+    function liftCounterAboveModal() {
+        if (!counterEl || counterStash) { return; }
+        var rect = counterEl.getBoundingClientRect();
+        var computed = window.getComputedStyle(counterEl);
+
+        var placeholder = document.createElement('span');
+        placeholder.className = 'hq-counter-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.style.display = 'inline-block';
+        placeholder.style.width  = rect.width  + 'px';
+        placeholder.style.height = rect.height + 'px';
+        placeholder.style.marginLeft  = computed.marginLeft;
+        placeholder.style.marginRight = computed.marginRight;
+        placeholder.style.visibility = 'hidden';
+        placeholder.style.pointerEvents = 'none';
+
+        counterStash = {
+            parent: counterEl.parentNode,
+            placeholder: placeholder
+        };
+        counterEl.parentNode.insertBefore(placeholder, counterEl);
+
+        counterEl.style.position = 'fixed';
+        counterEl.style.left = rect.left + 'px';
+        counterEl.style.top  = rect.top  + 'px';
+        counterEl.style.margin = '0';
+        counterEl.style.zIndex = '10001';
+        /* Marca para que el toast se posicione debajo del contador (centrado),
+           solo durante esta secuencia modal. */
+        counterEl.classList.add('hq-counter--modal-anim');
+        document.body.appendChild(counterEl);
+    }
+
+    function lowerCounterFromAboveModal() {
+        if (!counterEl || !counterStash) { return; }
+        /* Quita la clase de fade-out: cuando el contador vuelve al header,
+           debe tener opacity 1 (estado normal). El cambio es instantáneo
+           porque la regla base no transita la opacity. También se quita la
+           clase que reposiciona el toast debajo (vuelve a estar a la derecha). */
+        counterEl.classList.remove('hq-counter--fading');
+        counterEl.classList.remove('hq-counter--modal-anim');
+        counterEl.removeAttribute('style');
+        if (counterStash.placeholder && counterStash.placeholder.parentNode) {
+            counterStash.placeholder.parentNode.replaceChild(counterEl, counterStash.placeholder);
+        } else if (counterStash.parent) {
+            counterStash.parent.appendChild(counterEl);
+        }
+        counterStash = null;
+    }
+
+    /* ═══════════════════════════════════════════
+       SECUENCIA "BURBUJA" — corazón dialogo-dot
+       ───────────────────────────────────────────
+       Al click, el corazón pequeño (dot transformado) se desvanece y se
+       crea una pompa de jabón en su misma posición. La pompa asciende
+       ~250 px con oscilación lateral, en su pico estalla (anillo + 6
+       chispas radiales) y desde el punto del estallido vuela el corazón
+       al contador. Tras el vuelo, el dot se restaura como punto normal.
+    ═══════════════════════════════════════════ */
+
+    var BUBBLE_FLOAT_DURATION = 1500;
+    var BUBBLE_POP_DURATION = 380;
+    var BUBBLE_SPARK_COUNT = 6;
+    var BUBBLE_RESTORE_DELAY = 800;   /* tiempo extra tras collect para restaurar el dot */
+
+    function runDialogoDotSequence(heartButton) {
+        var rect = heartButton.getBoundingClientRect();
+        var startX = rect.left + rect.width  / 2 - 28;   /* 28 = bubble/2 (56/2) */
+        var startY = rect.top  + rect.height / 2 - 28;
+
+        /* Crear la pompa con un corazón dentro, en la posición del dot */
+        var bubble = document.createElement('div');
+        bubble.className = 'hq-bubble';
+        bubble.setAttribute('aria-hidden', 'true');
+        bubble.style.left = startX + 'px';
+        bubble.style.top  = startY + 'px';
+        bubble.innerHTML = '<img src="' + HEART_IMG + '" alt="">';
+        bubble.style.animation = 'hq-bubble-float ' + BUBBLE_FLOAT_DURATION +
+                                 'ms cubic-bezier(.34,.07,.45,.99) forwards';
+        document.body.appendChild(bubble);
+
+        /* El dot original se desvanece — el corazón ya está "encerrado" */
+        heartButton.classList.add('is-collected');
+
+        /* Al final del trayecto: estallido + chispas + collect (vuelo) */
+        setTimeout(function () {
+            var bRect = bubble.getBoundingClientRect();
+            var cx = bRect.left + bRect.width  / 2;
+            var cy = bRect.top  + bRect.height / 2;
+
+            /* Anillo blanco que se expande */
+            var pop = document.createElement('div');
+            pop.className = 'hq-bubble-pop';
+            pop.setAttribute('aria-hidden', 'true');
+            pop.style.left = (cx - 28) + 'px';
+            pop.style.top  = (cy - 28) + 'px';
+            document.body.appendChild(pop);
+            setTimeout(function () {
+                if (pop.parentNode) { pop.parentNode.removeChild(pop); }
+            }, BUBBLE_POP_DURATION);
+
+            /* Mini-corazones radiales (chispas) */
+            for (var i = 0; i < BUBBLE_SPARK_COUNT; i++) {
+                spawnBubbleSpark(cx, cy, i, BUBBLE_SPARK_COUNT);
+            }
+
+            /* Quitar la pompa */
+            if (bubble.parentNode) { bubble.parentNode.removeChild(bubble); }
+
+            /* Vuelo del corazón al contador desde el punto del estallido */
+            var originRect = {
+                left: cx - 11, top: cy - 11,
+                width: 22, height: 22,
+                right: cx + 11, bottom: cy + 11
+            };
+            setTimeout(function () { collect('dialogo-dot', originRect); }, 80);
+
+            /* Restaurar el dot a punto normal una vez ha terminado el vuelo */
+            setTimeout(function () { restoreDialogoDot(heartButton); },
+                       80 + 700 + BUBBLE_RESTORE_DELAY);
+        }, BUBBLE_FLOAT_DURATION);
+    }
+
+    function spawnBubbleSpark(cx, cy, i, total) {
+        var img = document.createElement('img');
+        img.src = HEART_IMG;
+        img.className = 'hq-bubble-spark';
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        var size = 10 + Math.random() * 6;
+        img.style.width = size + 'px';
+        img.style.height = size + 'px';
+        img.style.left = (cx - size / 2) + 'px';
+        img.style.top  = (cy - size / 2) + 'px';
+        document.body.appendChild(img);
+
+        var angle = (i / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        var dist = 50 + Math.random() * 35;
+        var endX = Math.cos(angle) * dist;
+        var endY = Math.sin(angle) * dist - 10;
+        var rot = (Math.random() - 0.5) * 360;
+
+        if (typeof img.animate === 'function') {
+            img.animate([
+                { transform: 'translate(0,0) scale(0.4)', opacity: 1 },
+                { transform: 'translate(' + endX + 'px,' + endY + 'px) scale(1) rotate(' + rot + 'deg)', opacity: 0 }
+            ], {
+                duration: 600 + Math.random() * 200,
+                easing: 'cubic-bezier(.2,.6,.4,1)',
+                fill: 'forwards'
+            }).onfinish = function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            };
+        } else {
+            setTimeout(function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            }, 800);
+        }
+    }
+
+    /** Devuelve el segundo dot del carrusel (que era el corazón) a su
+        estado normal: quita la imagen Twemoji y todas las clases/atributos
+        añadidos por el script inline de dialogogeneracional.html. El dot
+        recupera su rol original como punto de navegación. */
+    function restoreDialogoDot(heartButton) {
+        var img = heartButton.querySelector('img');
+        if (img && img.parentNode) { img.parentNode.removeChild(img); }
+        heartButton.classList.remove('hq-dot-heart', 'is-collected', 'is-collecting');
+        heartButton.removeAttribute('data-heart-id');
+        heartButton.removeAttribute('aria-label');
+    }
+
+    /* ═══════════════════════════════════════════
+       SECUENCIA "REVENTAR" — corazón mensaje
+       ───────────────────────────────────────────
+       Al cerrarse el overlay de éxito del formulario de contacto, el
+       icono ♥ del label crece sin parar (4 pasos crescendo) hasta su
+       tamaño máximo y revienta en pedazos rojos. El corazón fantasma
+       vuela al contador desde el punto de la rotura.
+    ═══════════════════════════════════════════ */
+
+    var MSG_GROW_DURATION = 1300;
+    var MSG_FRAGMENT_COUNT = 14;
+    var MSG_FLY_DELAY = 80;
+    var MSG_RESTORE_DELAY = 80 + 700 + 200;   /* fly delay + fly duration + margen */
+
+    /* Clip-paths irregulares para los pedazos */
+    var MSG_FRAGMENT_SHAPES = [
+        'polygon(0% 0%, 100% 35%, 60% 100%)',
+        'polygon(50% 0%, 100% 80%, 20% 100%, 0% 30%)',
+        'polygon(0% 20%, 80% 0%, 100% 70%, 30% 100%)',
+        'polygon(20% 0%, 100% 40%, 70% 100%, 0% 80%)',
+        'polygon(0% 50%, 50% 0%, 100% 50%, 50% 100%)',   /* diamante */
+        'polygon(0% 0%, 100% 0%, 70% 100%)',
+        'polygon(40% 0%, 100% 60%, 50% 100%, 0% 40%)'
+    ];
+    var MSG_FRAGMENT_COLORS = ['#e74c3c', '#c0392b', '#d33', '#cd3527', '#ec5f4a', '#b53224'];
+
+    function runMensajeSequence() {
+        var msgHeartEl = document.getElementById('msgHeart');
+        if (!msgHeartEl) {
+            /* Sin el icono físico, fallback al flujo estándar (vuelo desde
+               un origen central de pantalla) */
+            collect('mensaje', null);
+            return;
+        }
+
+        /* Capturar el centro del icono ANTES de aplicar la animación, para
+           que los fragmentos y el vuelo final partan del punto exacto del
+           corazón en el formulario. */
+        var initialRect = msgHeartEl.getBoundingClientRect();
+        var cx = initialRect.left + initialRect.width  / 2;
+        var cy = initialRect.top  + initialRect.height / 2;
+
+        msgHeartEl.classList.add('hq-msg-growing');
+
+        /* Cuando termina la animación de crecimiento + reventón */
+        setTimeout(function () {
+            /* Estallido de pedazos en el centro */
+            for (var i = 0; i < MSG_FRAGMENT_COUNT; i++) {
+                spawnMensajeFragment(cx, cy, i, MSG_FRAGMENT_COUNT);
+            }
+
+            /* Vuelo del corazón fantasma al contador desde el centro */
+            var originRect = {
+                left: cx - 11, top: cy - 11,
+                width: 22, height: 22,
+                right: cx + 11, bottom: cy + 11
+            };
+            setTimeout(function () { collect('mensaje', originRect); }, MSG_FLY_DELAY);
+
+            /* Restaurar el icono a su estado normal una vez terminado el
+               vuelo (queda visible en el label como decoración). */
+            setTimeout(function () {
+                msgHeartEl.classList.remove('hq-msg-growing');
+            }, MSG_RESTORE_DELAY);
+        }, MSG_GROW_DURATION);
+    }
+
+    function spawnMensajeFragment(cx, cy, i, total) {
+        var div = document.createElement('div');
+        div.className = 'hq-msg-fragment';
+        div.setAttribute('aria-hidden', 'true');
+        var size = 14 + Math.random() * 18;
+        div.style.width  = size + 'px';
+        div.style.height = size + 'px';
+        div.style.left = (cx - size / 2) + 'px';
+        div.style.top  = (cy - size / 2) + 'px';
+        div.style.clipPath = MSG_FRAGMENT_SHAPES[Math.floor(Math.random() * MSG_FRAGMENT_SHAPES.length)];
+        div.style.background = MSG_FRAGMENT_COLORS[Math.floor(Math.random() * MSG_FRAGMENT_COLORS.length)];
+        document.body.appendChild(div);
+
+        var angle = (i / total) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+        var dist = 90 + Math.random() * 80;
+        var endX = Math.cos(angle) * dist;
+        var endY = Math.sin(angle) * dist - 10;
+        var rot = (Math.random() - 0.5) * 720;
+
+        if (typeof div.animate === 'function') {
+            div.animate([
+                { transform: 'translate(0,0) scale(0.6) rotate(0)', opacity: 1 },
+                { transform: 'translate(' + (endX*0.5) + 'px,' + (endY*0.4 - 10) + 'px) scale(1) rotate(' + (rot*0.4) + 'deg)', opacity: 1, offset: 0.4 },
+                { transform: 'translate(' + endX + 'px,' + endY + 'px) scale(0.95) rotate(' + (rot*0.7) + 'deg)', opacity: 0.85, offset: 0.65 },
+                /* Caída final con gravedad */
+                { transform: 'translate(' + (endX*1.05) + 'px,' + (endY + 110) + 'px) scale(0.7) rotate(' + rot + 'deg)', opacity: 0 }
+            ], {
+                duration: 900 + Math.random() * 300,
+                easing: 'cubic-bezier(.3,.5,.5,1)',
+                fill: 'forwards'
+            }).onfinish = function () {
+                if (div.parentNode) { div.parentNode.removeChild(div); }
+            };
+        } else {
+            setTimeout(function () {
+                if (div.parentNode) { div.parentNode.removeChild(div); }
+            }, 1200);
+        }
+    }
+
+    /** Elimina del DOM todos los botones corazón con data-heart-id="abuela"
+        excepto el indicado en `except` (que se está animando y se eliminará
+        por su propio camino tras la animación de vuelo). Esto sincroniza el
+        estado entre la galería y el modal cuando uno de los dos se recolecta. */
+    function dismissAllGrandmaHearts(except) {
+        var nodes = document.querySelectorAll('[data-heart-id="abuela"]');
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i] === except) { continue; }
+            if (nodes[i].parentNode) { nodes[i].parentNode.removeChild(nodes[i]); }
+        }
+    }
+
+    function spawnGrandmaModalBurst(heartButton) {
+        /* Origen = centro del corazón en pantalla (position fixed). */
+        var rect = heartButton.getBoundingClientRect();
+        var ox = rect.left + rect.width  / 2;
+        var oy = rect.top  + rect.height / 2;
+        for (var i = 0; i < GRANDMA_BURST_COUNT; i++) {
+            spawnGrandmaModalBurstHeart(ox, oy, i);
+        }
+    }
+
+    function spawnGrandmaModalBurstHeart(ox, oy, i) {
+        var img = document.createElement('img');
+        img.src = HEART_IMG;
+        img.className = 'hq-burst-heart hq-burst-heart--modal';
+        img.alt = '';
+        img.setAttribute('aria-hidden', 'true');
+        var size = 16 + Math.random() * 14;
+        img.style.width  = size + 'px';
+        img.style.height = size + 'px';
+        img.style.left = (ox - size / 2) + 'px';
+        img.style.top  = (oy - size / 2) + 'px';
+        document.body.appendChild(img);
+
+        var angle = (i / GRANDMA_BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        var dist = 90 + Math.random() * 110;
+        var endX = Math.cos(angle) * dist;
+        var endY = Math.sin(angle) * dist - 25;
+        var rot = (Math.random() - 0.5) * 360;
+
+        if (typeof img.animate === 'function') {
+            img.animate([
+                { transform: 'translate(0,0) scale(0.4) rotate(0)', opacity: 0 },
+                { transform: 'translate(0,0) scale(1.1) rotate(' + (rot / 4) + 'deg)', opacity: 1, offset: 0.18 },
+                { transform: 'translate(' + endX + 'px,' + (endY - 20) + 'px) scale(1) rotate(' + (rot / 2) + 'deg)', opacity: 1, offset: 0.65 },
+                { transform: 'translate(' + (endX * 1.15) + 'px,' + (endY + 80) + 'px) scale(0.6) rotate(' + rot + 'deg)', opacity: 0 }
+            ], {
+                duration: GRANDMA_MODAL_BURST_DURATION,
+                easing: 'cubic-bezier(.2,.6,.4,1)',
+                fill: 'forwards'
+            }).onfinish = function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            };
+        } else {
+            setTimeout(function () {
+                if (img.parentNode) { img.parentNode.removeChild(img); }
+            }, GRANDMA_MODAL_BURST_DURATION);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       MODAL HEART WATCHER
+       ───────────────────────────────────────────
+       Observa #modal y #photo. Cuando el modal está abierto y la foto activa
+       es la de la abuela y el corazón no está recolectado, inserta un botón
+       corazón en body (position fixed) sobre la foto. Lo quita en cualquier
+       otro caso. Reposiciona en cada resize.
+    ═══════════════════════════════════════════ */
+
+    function bindModalHeartWatcher() {
+        var photoEl = document.getElementById('photo');
+        var modalEl = document.getElementById('modal');
+        if (!photoEl || !modalEl) { return; }
+
+        var srcObserver = new MutationObserver(syncModalHeart);
+        srcObserver.observe(photoEl, { attributes: true, attributeFilter: ['src'] });
+
+        var modalObserver = new MutationObserver(syncModalHeart);
+        modalObserver.observe(modalEl, { attributes: true, attributeFilter: ['class'] });
+
+        window.addEventListener('resize', function () {
+            var btn = document.querySelector('.hq-photo-heart--modal');
+            if (btn && photoEl) { positionModalHeart(btn, photoEl); }
+        }, { passive: true });
+    }
+
+    function syncModalHeart() {
+        var photoEl = document.getElementById('photo');
+        var modalEl = document.getElementById('modal');
+        if (!photoEl || !modalEl) { return; }
+
+        var existing = document.querySelector('.hq-photo-heart--modal');
+        var modalOpen = modalEl.classList.contains('open');
+        var src = photoEl.getAttribute('src') || '';
+        var shouldShow = modalOpen &&
+                         src.indexOf(GRANDMA_SRC_TOKEN) !== -1 &&
+                         !isCollected('abuela');
+
+        if (!shouldShow) {
+            if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
+            return;
+        }
+        if (existing) {
+            positionModalHeart(existing, photoEl);
+            return;
+        }
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hq-photo-heart hq-photo-heart--modal';
+        btn.setAttribute('data-heart-id', 'abuela');
+        btn.setAttribute('data-heart-context', 'modal');
+        btn.setAttribute('aria-label', 'Recolectar corazón de la abuela');
+        btn.innerHTML = '<img src="' + HEART_IMG + '" alt="" width="22" height="22">';
+        document.body.appendChild(btn);
+        positionModalHeart(btn, photoEl);
+    }
+
+    /** Sitúa el botón con position: fixed centrado horizontalmente sobre la
+        parte inferior de la foto del modal. Calcula a partir del rect real
+        del <img id="photo"> (no del contenedor), de modo que aunque el área
+        sea más alta que la foto, el corazón queda pegado a la parte baja
+        de la imagen visible. */
+    function positionModalHeart(btn, photoEl) {
+        var r = photoEl.getBoundingClientRect();
+        if (!r.width || !r.height) { return; }
+        /* 22 px de altura del icono + 14 px de margen visual + 6 px de padding
+           del botón → el icono queda a 14 px del borde inferior de la foto. */
+        btn.style.left = (r.left + r.width / 2) + 'px';
+        btn.style.top  = (r.top + r.height - 22 - 14 - 6) + 'px';
+    }
+
     /** Oculta los corazones flotantes sobre fotos que ya hayan sido recolectados
         en visitas anteriores. Se ejecuta al cargar la página para que un corazón
         que ya está en el contador no vuelva a aparecer sobre la foto. */
@@ -707,30 +1246,17 @@
         if (!overlay) { return; }
 
         /* La recolección se dispara cuando el overlay se CIERRA (deja de estar
-           activo), no al abrirse. El corazón sale del icono ♥ que vive dentro
-           del label "Mensaje (dime algo bonito ♥)" y vuela hasta el contador.
-           Si por algún motivo el icono no existe (futuras refactorizaciones),
-           caemos a un origen central de pantalla como fallback. */
+           activo), no al abrirse. En lugar de un vuelo directo, ejecutamos la
+           secuencia "reventar": el icono ♥ del label crece sin parar, revienta
+           en pedazos rojos y desde el punto de la rotura el corazón vuela al
+           contador. Ver runMensajeSequence(). */
         var wasActive = overlay.classList.contains('active');
         var observer = new MutationObserver(function () {
             var nowActive = overlay.classList.contains('active');
             if (wasActive && !nowActive && !isCollected('mensaje')) {
-                var origin = document.getElementById('msgHeart');
-                var rect;
-                if (origin) {
-                    rect = origin.getBoundingClientRect();
-                } else {
-                    rect = {
-                        left: window.innerWidth / 2 - 12,
-                        top:  window.innerHeight / 2 - 12,
-                        width: 24, height: 24,
-                        right: window.innerWidth / 2 + 12,
-                        bottom: window.innerHeight / 2 + 12
-                    };
-                }
                 /* Pequeño delay para que la transición de fade-out del overlay
-                   (~500ms) termine antes de que el corazón salga volando. */
-                setTimeout(function () { collect('mensaje', rect); }, 550);
+                   (~500ms) termine antes de que arranque el reventón. */
+                setTimeout(runMensajeSequence, 550);
             }
             wasActive = nowActive;
         });
@@ -777,6 +1303,8 @@
        INIT
     ═══════════════════════════════════════════ */
 
+    /** Detecta si estamos en la home: el header de la home no incluye ni
+        navegación desktop ni burger, solo logo + lang-selector. */
     function isHomePage() {
         var hasNav    = !!document.querySelector('.header__inner .nav--desktop');
         var hasBurger = !!document.querySelector('.header__inner .burger');
@@ -784,21 +1312,25 @@
     }
 
     function init() {
-        /* MODO PRUEBAS — quitar cuando se valide el minijuego */
-        if (isHomePage()) {
-            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-            return;
-        }
+        /* ⚠️ MODO PRUEBAS — borra el progreso del minijuego en cada carga de
+           página para poder probar las animaciones repetidamente sin tener
+           que hacer HeartQuest.reset() en consola. Quitar este bloque cuando
+           se valide la mecánica completa para que el progreso persista. */
+        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
 
         loadState();
 
         counterEl = buildCounter();
         if (!counterEl) { return; }
+        /* En la home etiquetamos el contador para poder ocultarlo en mobile
+           desde CSS (no hay espacio en el header reducido de la home). */
+        if (isHomePage()) { counterEl.classList.add('hq-counter--home'); }
         panelEl = buildPanel();
         bindCounterTriggers();
         bindClickListener();
         bindSuccessOverlayWatcher();
         bindHeartRainWatcher();
+        bindModalHeartWatcher();
         hideCollectedPhotoHearts();
 
         window.addEventListener('resize', function () {

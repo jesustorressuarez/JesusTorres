@@ -247,7 +247,13 @@
 
         var track = document.getElementById('track');
         var dotsContainer = document.getElementById('dots-container');
-        var slides = document.querySelectorAll('.slide img');
+        /* Selector con `>` (hijo directo) y :not() para excluir las imágenes
+           decorativas del minijuego "Heart Quest" (.hq-photo-heart contiene un
+           <img> Twemoji dentro de un <button>; las explosiones generan <img>
+           con clase .hq-burst-heart como hijos directos del slide). Sin este
+           filtro, esas imágenes aparecerían como una "foto" más en el carousel
+           y en la lista del modal de zoom. */
+        var slides = document.querySelectorAll('.slide > img:not(.hq-burst-heart)');
 
         // --- Dots del carousel ---
         if (track && dotsContainer) {
@@ -425,15 +431,15 @@
 
                 if (showTitle) {
                     titlePanel.style.display = '';
-                    var leftHTML = '';
-                    if (data.title) leftHTML += '<span class="title-name">' + data.title + '</span>';
-                    if (data.desc)  leftHTML += '<span class="title-desc">' + data.desc + '</span>';
-                    titlePanel.querySelector('.title-left').innerHTML = leftHTML;
+                    var leftParts = [];
+                    if (data.title) leftParts.push('<span class="title-name">' + data.title + '</span>');
+                    if (data.desc)  leftParts.push('<span class="title-desc">' + data.desc + '</span>');
+                    titlePanel.querySelector('.title-left').innerHTML = leftParts.join(' <span class="title-sep">/</span> ');
 
                     var rightParts = [];
                     if (data.date)     rightParts.push(data.date);
                     if (data.location) rightParts.push(data.location);
-                    titlePanel.querySelector('.title-right').textContent = rightParts.join(' | ');
+                    titlePanel.querySelector('.title-right').innerHTML = rightParts.join(' <span class="title-sep">/</span> ');
                 } else {
                     titlePanel.style.display = 'none';
                 }
@@ -495,6 +501,23 @@
             if (counterInline) { counterInline.textContent = '(' + (currentIdx + 1) + '/' + slides.length + ')'; }
         }
 
+        /* Mide el header de la página y lo expone como --header-h en el overlay
+           del modal. En desktop (≥769px), el CSS usa esa variable para que el
+           top del wrapper coincida con el bottom del header de la página. */
+        function setModalHeaderHeightVar() {
+            if (!modal) { return; }
+            var headerEl = document.querySelector('.header');
+            if (headerEl) {
+                modal.style.setProperty('--header-h', headerEl.offsetHeight + 'px');
+            }
+        }
+
+        window.addEventListener('resize', function () {
+            if (modal && modal.classList.contains('open')) {
+                setModalHeaderHeightVar();
+            }
+        });
+
         window.openZoomPortada = function (src) {
             if (!modal || !photo) { return; }
             resetZoom();
@@ -503,6 +526,7 @@
             if (photoArea)  { photoArea.style.flex = ''; }
             photo.style.maxHeight = '';
             photo.src = src;
+            setModalHeaderHeightVar();
             modal.classList.add('open', 'standalone');
             document.body.classList.add('modal-open');
             document.body.style.touchAction = 'none';
@@ -513,6 +537,7 @@
             if (!modal || !photo || !slides.length) { return; }
             currentIdx = Array.from(slides).findIndex(function (img) { return img.src === src; });
             if (currentIdx < 0) { currentIdx = 0; }
+            setModalHeaderHeightVar();
             modal.classList.add('open');
             document.body.classList.add('modal-open');
             document.body.style.touchAction = 'none';
@@ -662,10 +687,20 @@
 
             /* 4. Segunda pasada: con el ancho real aplicado, medir las alturas
                finales de título y meta. Si la foto + paneles excede el wrapper,
-               encoger la foto para caber en 90vh. */
+               encoger la foto para caber en 90vh.
+               En desktop, el title-panel está absolute (fuera del flujo del
+               wrapper, sobre la franja del header de la página) y NO le resta
+               espacio a la foto: por eso solo contamos su altura si su position
+               computed no es 'absolute'. */
             if (wrapper) {
                 var wrapperH = wrapper.clientHeight;
-                var titleH = (titlePanel && titlePanel.style.display !== 'none') ? titlePanel.offsetHeight : 0;
+                var titleH = 0;
+                if (titlePanel && titlePanel.style.display !== 'none') {
+                    var titlePos = window.getComputedStyle(titlePanel).position;
+                    if (titlePos !== 'absolute') {
+                        titleH = titlePanel.offsetHeight;
+                    }
+                }
                 var metaH  = (metaVisible && metaPanel) ? metaPanel.offsetHeight : 0;
                 var maxPhotoH = wrapperH - titleH - metaH;
                 if (maxPhotoH < 0) { maxPhotoH = 0; }
@@ -1273,7 +1308,8 @@
             if (telefono) {
                 telefono.addEventListener('input', function () {
                     var phoneVal = telefono.value.trim();
-                    if (phoneVal === '' || phoneVal.startsWith('+')) {
+                    var phoneDigits = phoneVal.replace(/[^0-9]/g, '').length;
+                    if (phoneVal === '' || phoneDigits >= 9) {
                         telefono.closest('.input-group').classList.remove('error');
                     }
                 });

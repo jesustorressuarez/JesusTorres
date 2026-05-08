@@ -362,4 +362,67 @@
     <script src="../../assets/scripts.js"></script>
     <script src="../../assets/heart-quest.js"></script>
 
-    <!-- Zoom portada (independiente del carrusel
+    <!-- ═══════════════════════════════════════════
+         HEART QUEST · corazón-dot del carrusel
+         ───────────────────────────────────────────
+         Tras DOMContentLoaded, scripts.js ya ha generado los .dot del
+         carrusel. Aquí transformamos el SEGUNDO dot en un corazoncito
+         latiendo (sin recrear el elemento, para no perder el listener
+         de click que navega al slide 2). Si ya está recolectado, no
+         se transforma — vuelve a comportarse como un punto normal.
+    ═══════════════════════════════════════════ -->
+    <script>
+    /* Transforma el SEGUNDO dot del carrusel en un corazón coleccionable.
+       Solo si el corazón "dialogo-dot" no se ha recolectado todavía. La
+       animación al hacer clic (pompa de jabón flotando + estallido + vuelo
+       al contador) y la restauración del dot a su estado normal las maneja
+       íntegramente heart-quest.js (runDialogoDotSequence + restoreDialogoDot).
+       Aquí nos limitamos a la transformación inicial. */
+    (function () {
+        'use strict';
+        var HEART_ID = 'dialogo-dot';
+        var HEART_IMG = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2764.svg';
+
+        function isAlreadyCollected() {
+            try {
+                var raw = localStorage.getItem('jt_hearts');
+                if (!raw) { return false; }
+                var data = JSON.parse(raw);
+                return !!(data && Array.isArray(data.collected) && data.collected.indexOf(HEART_ID) !== -1);
+            } catch (e) { return false; }
+        }
+
+        function transformSecondDot() {
+            if (isAlreadyCollected()) { return; }
+
+            var dotsContainer = document.getElementById('dots-container');
+            if (!dotsContainer) { return; }
+
+            var dots = dotsContainer.querySelectorAll('.dot');
+            if (dots.length < 2) { return; }
+
+            var target = dots[1]; // segundo dot
+            if (target.classList.contains('hq-dot-heart')) { return; }
+
+            target.classList.add('hq-dot-heart');
+            target.setAttribute('data-heart-id', HEART_ID);
+            target.setAttribute('aria-label', 'Ir al slide 2 · corazón coleccionable');
+
+            var img = document.createElement('img');
+            img.src = HEART_IMG;
+            img.alt = '';
+            img.width = 16;
+            img.height = 16;
+            target.appendChild(img);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', transformSecondDot);
+        } else {
+            transformSecondDot();
+        }
+    })();
+    </script>
+
+</body>
+</html>

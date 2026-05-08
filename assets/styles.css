@@ -971,11 +971,11 @@ html.lenis, html.lenis body {
 }
 .modal-nav button {
     background: none; border: none; outline: none; cursor: pointer;
-    color: rgba(255,255,255,0.45); font-size: 0.722rem;
+    color: #fff; font-size: 0.722rem;
     font-weight: 700; font-family: "Inter", sans-serif;
     letter-spacing: -0.04em;
 }
-.modal-nav button:hover { color: #fff; }
+.modal-nav button:hover { color: rgba(255,255,255,0.45); }
 .modal-nav button:disabled { opacity: 0.2; pointer-events: none; }
 .modal-nav .sep {
     color: rgba(255,255,255,0.45); font-size: 0.722rem;
@@ -1087,18 +1087,23 @@ html.lenis, html.lenis body {
     padding: 0 0 8px 0;
     gap: 16px;
 }
-.modal-title-panel .title-left { display: flex; flex-direction: column; gap: 2px; }
+.modal-title-panel .title-left { white-space: nowrap; }
 .modal-title-panel .title-name {
     font-size: 15px; font-weight: 700; color: #f2f2f2;
     letter-spacing: -0.02em;
 }
 .modal-title-panel .title-desc {
-    font-size: 13px; font-weight: 400; color: #f2f2f2;
-    opacity: 0.7;
+    font-size: 13px; font-weight: 400;
+    color: rgba(242, 242, 242, 0.7);
+}
+.modal-title-panel .title-sep {
+    font-size: 13px; font-weight: 400;
+    color: rgba(242, 242, 242, 0.5);
 }
 .modal-title-panel .title-right {
-    font-size: 13px; font-weight: 400; color: #f2f2f2;
-    opacity: 0.7; white-space: nowrap;
+    font-size: 13px; font-weight: 400;
+    color: rgba(242, 242, 242, 0.7);
+    white-space: nowrap;
 }
 
 /* ── Panel metadatos ── */
@@ -1711,6 +1716,13 @@ input[type="tel"] {
 
 /* ── Modal: responsive mobile ── */
 @media (max-width: 768px) {
+    /* Ajuste dinámico al viewport visible (con/sin barra inferior de Chrome).
+       Misma lógica que el body con min-height: 100dvh: el modal-overlay se
+       redimensiona al espacio realmente visible, así la botonera anclada a
+       bottom queda siempre 16px sobre el borde realmente visible. */
+    .modal-overlay {
+        height: 100dvh;
+    }
     .modal-nav {
         /* Contenedor a ancho completo para centrar sin comprimir los botones */
         left: 0;
@@ -1725,5 +1737,46 @@ input[type="tel"] {
     .modal-meta-panel { padding: 10px; }
     .modal-meta-exif { display: grid; grid-template-columns: 1fr 1fr; }
     .zoom-minimap.active { display: none; }
+    /* Title-panel en dos líneas alineadas a la izquierda:
+       arriba título + subtítulo, abajo fecha + lugar. */
+    .modal-title-panel {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    .modal-title-panel .title-right { text-align: left; }
+}
+
+/* ── Modal: desktop — el wrapper queda anclado al borde inferior del header
+   de la página (top a header-h, bottom a 5vh). El title-panel sale del flujo
+   del wrapper y se coloca sobre la franja del header de la página, ocupando
+   horizontalmente el mismo ancho que la foto (lo sincroniza el JS). La foto
+   crece hacia arriba para llenar el espacio liberado por el title-panel.
+   --header-h lo asigna JS al abrir el modal. */
+@media (min-width: 769px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding-bottom: 5vh;
+    }
+    .modal-wrapper {
+        /* Valor fijo 62px (no var(--header-h)) a propósito: si el header real
+           mide más de 62px, la foto sobrepasa ligeramente hacia arriba el borde
+           inferior del header de la página, en lugar de coincidir con él. */
+        height: calc(95vh - 62px);
+        /* Permitir que el title-panel desborde hacia arriba (sobre el header).
+           El photo-area sigue con overflow:hidden, así que el zoom no se afecta. */
+        overflow: visible;
+    }
+    .modal-title-panel {
+        position: absolute;
+        bottom: 100%;            /* su bottom = top del wrapper = bottom del header */
+        left: 50%;
+        transform: translateX(-50%);
+        height: var(--header-h, 50px);
+        /* align-items y padding heredan de la regla base: flex-end + 0 0 8px 0,
+           así el texto queda pegado al bottom de la franja con 8px de aire
+           respecto al borde superior de la foto, igual que antes del cambio. */
+        z-index: 10000;          /* sobre el header (100), bajo .modal-nav (10001) */
+    }
 }
 
