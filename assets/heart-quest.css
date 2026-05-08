@@ -165,13 +165,25 @@
 }
 
 /* =========================
-   2. DESPLEGABLE / PANEL
+   2. BOCADILLO DEL HOVER (panel intro)
+   ─────────────────────────────────────────
+   Se abre al pasar el cursor sobre el contador. Contiene:
+   - Frase de intro
+   - (Si hay) Sección "Corazones encontrados" con título + descripción
+   - Botón "Pedir ayuda" (abre el panel flotante de pistas)
+
+   Posicionamiento: el JS lo coloca con `left = rect.left - paddingLeft`,
+   de modo que el contenido interior (texto y botón) queda alineado con
+   el "X/Y" del contador.
 ========================= */
 
+/* Padding-left horizontal del bocadillo — referenciado desde JS para
+   alinear el texto interior con el "X/Y" del contador. Si cambias este
+   valor, sube también HQ_PANEL_PAD_LEFT en heart-quest.js. */
 .hq-panel {
   position: fixed;
   top: 64px;            /* recalculado desde JS al abrir */
-  left: 16px;           /* alineado a la izquierda (sigue al contador) */
+  left: 16px;           /* recalculado desde JS para alinear con el contador */
   z-index: 9999;
 
   width: min(300px, calc(100vw - 32px));
@@ -182,8 +194,8 @@
   border-radius: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 
-  /* Padding-top extra para hacer espacio al botón close (absolute) */
-  padding: 18px 18px 16px;
+  /* Padding simétrico — sin botón cerrar, no necesita padding-top extra */
+  padding: 14px 18px 14px;
 
   font-family: 'Inter', sans-serif;
   color: var(--General-300, #5B5A5A);
@@ -200,33 +212,51 @@
   transform: translateY(0);
 }
 
-/* Botón cerrar — solo aparece en la vista 'help' (cuando .hq-panel.is-help).
-   En la vista intro no se muestra: el panel se cierra solo al sacar el cursor. */
-.hq-panel__close {
-  display: none;
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  line-height: 1;
-  color: var(--General-200, #8D8D8D);
-  cursor: pointer;
-  padding: 4px 6px;
-  transition: color .3s ease-in-out;
-}
-
-.hq-panel.is-help .hq-panel__close { display: block; }
-.hq-panel__close:hover { color: var(--General-400, #262626); }
-
 /* Texto de instrucción (vista intro del panel) — SE MANTIENE SU LOOK */
 .hq-panel__intro {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 0.722rem;
   line-height: 1.55;
   letter-spacing: -0.3px;
   color: var(--General-300, #5B5A5A);
+}
+
+/* ─────────────────────────────────────────────
+   Sección "Corazones encontrados" (entre intro y botón Pedir ayuda)
+   Solo se renderiza si hay al menos un corazón recolectado.
+   ───────────────────────────────────────────── */
+.hq-found {
+  margin: 0 0 14px;
+  padding: 10px 0;
+  list-style: none;
+  border-top: 1px solid var(--General-150, #dadada);
+  border-bottom: 1px solid var(--General-150, #dadada);
+}
+
+.hq-found__item {
+  margin: 0;
+  padding: 6px 0;
+}
+.hq-found__item + .hq-found__item {
+  border-top: 1px dashed var(--General-150, #dadada);
+}
+
+.hq-found__title {
+  display: block;
+  font-size: 0.778rem;
+  letter-spacing: -0.3px;
+  color: var(--General-400, #262626);
+  font-weight: var(--text-extrabold, 800);
+  margin-bottom: 2px;
+}
+
+.hq-found__desc {
+  display: block;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  letter-spacing: -0.2px;
+  color: var(--General-300, #5B5A5A);
+  font-style: italic;
 }
 
 /* Corazón Twemoji que late dentro del texto (sustituye la palabra "corazones") */
@@ -294,11 +324,66 @@
   background-image: linear-gradient(var(--General-400, #262626), var(--General-400, #262626));
 }
 
-/* ─────────────────────────────────────────────
-   VISTA HELP — cabecera + lista numerada con toggle +/-
-   ───────────────────────────────────────────── */
+/* =========================
+   2b. PANEL FLOTANTE "PEDIR AYUDA"
+   ─────────────────────────────────────────
+   Aparece al pulsar el botón "Pedir ayuda" del bocadillo. Es un panel
+   independiente, anclado al margen INFERIOR-IZQUIERDO de la página.
+   Persiste entre páginas (estado guardado en localStorage). Solo se
+   cierra al pulsar la × del propio panel.
 
-.hq-panel__help-header {
+   Contenido: lista numerada con los corazones POR ENCONTRAR + sistema
+   de pistas escalonadas (botones +/− que revelan más pista por clic).
+========================= */
+
+.hq-help-panel {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 9998;       /* bajo el modal-overlay (9999) y bajo el contador clon (10001) */
+
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+
+  background: var(--General-100, #f2f2f2);
+  border-radius: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+
+  /* Padding-top extra para hacer espacio al botón cerrar (absolute) */
+  padding: 30px 18px 16px;
+
+  font-family: 'Inter', sans-serif;
+  color: var(--General-300, #5B5A5A);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity .25s ease, transform .25s ease, visibility .25s ease;
+}
+
+.hq-help-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.hq-help-panel__close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--General-200, #8D8D8D);
+  cursor: pointer;
+  padding: 4px 6px;
+  transition: color .3s ease-in-out;
+}
+.hq-help-panel__close:hover { color: var(--General-400, #262626); }
+
+.hq-help-panel__header {
   margin: 0 0 12px;
   font-size: 0.722rem;
   line-height: 1.45;
@@ -308,10 +393,29 @@
   border-bottom: 1px solid var(--General-150, #dadada);
 }
 
-.hq-panel__list {
+.hq-help-panel__empty {
+  margin: 0;
+  font-size: 0.722rem;
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+  color: var(--General-300, #5B5A5A);
+  font-style: italic;
+}
+
+.hq-help-panel__list {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+@media (max-width: 768px) {
+  .hq-help-panel {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
 }
 
 .hq-item {
@@ -524,64 +628,105 @@
 /* =========================
    4b. SECUENCIA "CORAZÓN DE LA ABUELA"
    ─────────────────────────────────────────
-   Variante: «Alt A · Crescendo lineal» (demo v6).
-   Tres fases secuenciales (total 2000 ms):
-     ① 0-700 ms   → vibración crescendo lineal del slide entero
-     ② 700-1300 ms → explosión de 18 corazones (.hq-burst-heart)
-     ③ 1300-2000 ms → vuelo al contador + slide volviendo a tamaño normal
-   El slide desactiva su overflow para permitir que la explosión y la propia
-   foto ampliada se sobrepongan a las celdas vecinas del grid.
+   Animación: «Cascada hacia arriba» (demo fuegos curados, alt B).
+   Mismo show del corazón en galería y en modal:
+     · Glow dorado del corazón pequeño durante 1,8 s
+     · 3 oleadas escalonadas de 8 partículas Twemoji (cada 220 ms)
+     · Cada partícula sube en parábola y al ápice libera mini-burst de 3
+   Galería: ADEMÁS la foto crece suavemente (zoom 1,10×) sin vibración y
+   se sobrepone al grid; vuelve cuando arranca el vuelo.
 ========================= */
 
+/* Galería — el slide crece SIN vibración: un solo zoom limpio que sube,
+   mantiene durante la cascada y vuelve mientras vuela el corazón. */
 .slide.is-grandma-anim {
   z-index: 50;
   overflow: visible !important;
   transform-origin: center center;
-  animation: hq-grandma-shake 2000ms linear both;
+  animation: hq-grandma-zoom 2200ms cubic-bezier(.25,.55,.5,1) both;
 }
 
-@keyframes hq-grandma-shake {
-  /* FASE 1 · Crescendo lineal (0% → 35%, 14 oscilaciones) */
-  0%    { transform: scale(1.000) translate(0, 0)            rotate(0); }
-  2.5%  { transform: scale(1.007) translate(-0.2px, 0.1px)   rotate(-0.04deg); }
-  5%    { transform: scale(1.014) translate(0.4px, -0.2px)   rotate(0.07deg); }
-  7.5%  { transform: scale(1.021) translate(-0.6px, 0.3px)   rotate(-0.11deg); }
-  10%   { transform: scale(1.029) translate(0.9px, -0.5px)   rotate(0.14deg); }
-  12.5% { transform: scale(1.036) translate(-1.1px, 0.7px)   rotate(-0.18deg); }
-  15%   { transform: scale(1.043) translate(1.4px, -0.9px)   rotate(0.21deg); }
-  17.5% { transform: scale(1.050) translate(-1.6px, 1.0px)   rotate(-0.25deg); }
-  20%   { transform: scale(1.057) translate(1.9px, -1.2px)   rotate(0.29deg); }
-  22.5% { transform: scale(1.064) translate(-2.1px, 1.4px)   rotate(-0.32deg); }
-  25%   { transform: scale(1.071) translate(2.4px, -1.6px)   rotate(0.36deg); }
-  27.5% { transform: scale(1.079) translate(-2.6px, 1.7px)   rotate(-0.39deg); }
-  30%   { transform: scale(1.086) translate(2.8px, -1.9px)   rotate(0.43deg); }
-  32.5% { transform: scale(1.093) translate(-3px, 2px)       rotate(-0.47deg); }
-  35%   { transform: scale(1.100) translate(3px, -2px)       rotate(0.50deg); }
-  /* FASE 2 · Pico estable (35% → 65%) — la foto se queda quieta mientras
-     explotan los corazones. */
-  37%   { transform: scale(1.100) translate(0, 0) rotate(0); }
-  65%   { transform: scale(1.100) translate(0, 0) rotate(0); }
-  /* FASE 3 · Vuelta (65% → 100%) — la foto encoge mientras vuela el corazón. */
-  100%  { transform: scale(1.000) translate(0, 0) rotate(0); }
+@keyframes hq-grandma-zoom {
+  0%   { transform: scale(1);    }
+  /* Sube en ~400 ms (0% → 18%) */
+  18%  { transform: scale(1.10); }
+  /* Mantiene mientras dura la cascada (18% → 80%, 400-1760 ms) */
+  80%  { transform: scale(1.10); }
+  /* Vuelve a tamaño normal mientras vuela el corazón (80% → 100%) */
+  100% { transform: scale(1);    }
 }
 
 /* Hover de la foto en la galería: durante la animación, anular el scale(1.05)
    heredado de `.is-gallery .slide img:hover` para que no interfiera con el
-   crescendo. Como la regla heredada tiene especificidad (0,3,1), igualamos. */
+   zoom. */
 .is-gallery .slide.is-grandma-anim img:hover {
   transform: none;
   filter: none;
 }
 
-/* Corazones de la explosión (se generan dinámicamente desde JS como hijos
-   del slide). Quedan absolutamente posicionados sobre la foto y heredan la
-   transformación del slide durante la fase 2. */
-.hq-burst-heart {
+/* Glow dorado del corazón pequeño durante todo el show (1,8 s) */
+.hq-photo-heart.is-bursting img {
+  animation: hq-grandma-glow 1800ms ease-in-out forwards !important;
+}
+@keyframes hq-grandma-glow {
+  0%   { filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35)); }
+  30%  { filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35))
+                 brightness(1.25)
+                 drop-shadow(0 0 8px rgba(255, 215, 130, 0.85)); }
+  60%  { filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35))
+                 brightness(1.35)
+                 drop-shadow(0 0 14px rgba(255, 230, 150, 0.95)); }
+  100% { filter: drop-shadow(0 2px 5px rgba(0,0,0,0.35))
+                 brightness(1.15)
+                 drop-shadow(0 0 6px rgba(255, 200, 100, 0.5)); }
+}
+
+/* Partículas de la cascada — emojis Twemoji con glow dorado y estela.
+   Variante base (galería): position absolute, hijo del slide. */
+.hq-fw-particle {
   position: absolute;
   pointer-events: none;
   z-index: 60;
+  filter:
+    drop-shadow(0 0 6px rgba(255, 230, 150, 0.9))
+    drop-shadow(0 0 14px rgba(255, 200, 100, 0.4));
   will-change: transform, opacity;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+.hq-fw-trail {
+  position: absolute;
+  pointer-events: none;
+  z-index: 59;
+  filter: blur(1px) drop-shadow(0 0 4px rgba(255, 220, 130, 0.6));
+  opacity: 0.5;
+  will-change: transform, opacity;
+}
+.hq-fw-burst {
+  position: absolute;
+  pointer-events: none;
+  z-index: 60;
+  filter: drop-shadow(0 0 4px rgba(255, 230, 150, 0.85));
+  will-change: transform, opacity;
+}
+
+/* Anular propiedades que la galería aplica a todas las <img> del slide
+   (`.is-gallery .slide img { object-fit: cover; transition: transform .4s;
+   cursor: pointer; border-radius: 0; }`) y que ensucian el render de las
+   partículas. El width/height ya se sobreescribe inline desde JS con
+   setProperty('important'), pero esto otro hay que anularlo aquí. */
+.hq-fw-particle, .hq-fw-trail, .hq-fw-burst {
+  object-fit: contain !important;
+  transition: none !important;
+  cursor: default !important;
+  border-radius: 0 !important;
+}
+
+/* Variante "fixed" para el modal — se añaden al <body> con position fixed
+   y z-index sobre el overlay (9999) y sobre el contador clon (10001). */
+.hq-fw-particle--fixed,
+.hq-fw-trail--fixed,
+.hq-fw-burst--fixed {
+  position: fixed !important;
+  z-index: 10002;
 }
 
 /* Variante "modal" del corazón flotante: se inserta en <body> con position
@@ -595,14 +740,6 @@
   z-index: 10001;
   /* Anular bottom heredado de .hq-photo-heart (irrelevante con position fixed) */
   bottom: auto;
-}
-
-/* Burst hearts disparados desde el modal: posicionados en body sobre el
-   modal (z-index 9999). Al mismo nivel que el contador "flotante" (10001)
-   durante la secuencia, así pueden cruzar visualmente sobre él. */
-.hq-burst-heart--modal {
-  position: fixed !important;
-  z-index: 10001;
 }
 
 /* =========================
@@ -750,7 +887,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .slide.is-grandma-anim { animation: none !important; }
-  .hq-burst-heart { display: none !important; }
+  .hq-photo-heart.is-bursting img { animation: none !important; }
+  .hq-fw-particle, .hq-fw-trail, .hq-fw-burst { display: none !important; }
 }
 
 /* =========================

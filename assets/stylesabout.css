@@ -90,6 +90,13 @@
     gap: var(--gap-XL);
 }
 
+/*INTRO SOFTWARE (heading + descripción)*/
+.software_intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-S);
+}
+
 /*MARQUEE*/
 .marquee {
   width: 100%;
@@ -341,18 +348,14 @@ a.big_button {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
-        padding: 20px 24px 22px 24px;
-        padding-right: 56px; /* hueco para el botón de cerrar absoluto */
+        padding: 36px 16px 22px 16px;
+    }
+    .sw-tooltip__text {
+        width: 100%;
     }
     .sw-tooltip__close {
-        position: absolute;
-        right: 12px;
         top: 12px;
-        font-size: 1.4rem;
-        padding: 6px 10px;
-    }
-    .sw-tooltip {
-        position: relative;
+        right: 16px;
     }
     .sw-tooltip__icon {
         height: 1.8rem;
@@ -368,7 +371,7 @@ a.big_button {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 4px 28px 4px 8px;
     border-radius: 6px;
     transition: background 0.2s;
     user-select: none;
@@ -383,6 +386,7 @@ a.big_button {
 }
 
 .sw-tooltip {
+    position: relative;
     width: 100%;
     background: #fff;
     overflow: hidden;
@@ -394,7 +398,7 @@ a.big_button {
 }
 
 .sw-tooltip.open {
-    max-height: 140px;
+    max-height: 200px;
     opacity: 1;
 }
 
@@ -402,7 +406,7 @@ a.big_button {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 20px 32px;
+    padding: 40px 32px 24px;
     max-width: 1400px;
     margin: 0 auto;
 }
@@ -415,6 +419,7 @@ a.big_button {
 }
 
 .sw-tooltip__text {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -436,19 +441,22 @@ a.big_button {
 }
 
 .sw-tooltip__close {
-    margin-left: auto;
+    position: absolute;
+    top: 14px;
+    right: 32px;
     background: none;
     border: none;
-    color: var(--General-200);
-    font-size: 1.2rem;
+    outline: none;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: color 0.2s, background 0.2s;
-    flex-shrink: 0;
+    color: var(--General-300);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.722rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    padding: 4px 0;
+    transition: color 0.3s ease-in-out;
 }
 
 .sw-tooltip__close:hover {
     color: var(--General-400);
-    background: var(--General-100);
 }
