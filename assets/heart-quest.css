@@ -15,6 +15,7 @@
 .hq-counter {
   /* Posición: pegado al logo (izquierda). El margin-right: auto empuja el
      resto del header (lang-selector, burger) a la derecha. */
+  position: relative;          /* anclaje para .hq-toast (hijo absolute) */
   margin-left: 16px;
   margin-right: auto;
 
@@ -87,6 +88,80 @@
 .hq-counter.is-complete {
   color: var(--General-400, #262626);
   font-weight: var(--text-extrabold, 800);
+}
+
+/* Durante la secuencia "abuela" en el modal, el contador está flotando
+   sobre el overlay. Cuando el toast empieza su fade-out, se añade esta
+   clase al contador para que se desvanezca al mismo ritmo (1,5 s) y
+   ambos desaparezcan a la vez. La clase se quita en cuanto el contador
+   vuelve al header (opacidad 1 instantánea, ya que la regla base no
+   transita opacity). */
+.hq-counter.hq-counter--fading {
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+/* ─────────────────────────────────────────────
+   Toast "+1! <title> encontrado"
+   Hijo absolute del contador → siempre pegado a su derecha. Hereda la
+   misma tipografía, tamaño y color del contador. Aparece y desaparece
+   con un fade + ligero deslizamiento de izquierda a derecha (2 s total).
+   ───────────────────────────────────────────── */
+.hq-toast {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.722rem;
+  font-weight: var(--text-regular, 400);
+  color: var(--General-200, #8D8D8D);
+  letter-spacing: -0.52px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  /* Transición de SALIDA (al quitar la clase .is-visible): fade-out lento. */
+  transition: opacity 1.5s ease, transform 1.5s ease;
+}
+
+.hq-toast.is-visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+  /* Transición de ENTRADA (al añadir la clase): aparece rápido y nítido. */
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+/* "+1" en negrita y título/comillas en cursiva (asegurados por si algún
+   reset del proyecto neutraliza los estilos por defecto de <strong>/<em>). */
+.hq-toast strong { font-weight: var(--text-extrabold, 800); }
+.hq-toast em     { font-style: italic; }
+
+/* Reposicionamiento solo durante la secuencia "abuela" en el modal:
+   el toast aparece DEBAJO del contador, centrado horizontalmente, en
+   lugar de a su derecha. Se sobreescriben las reglas base. */
+.hq-counter--modal-anim .hq-toast {
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%) translateY(-4px);
+}
+.hq-counter--modal-anim .hq-toast.is-visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* En mobile mantenemos el toast a la derecha del contador (igual que en
+   desktop), solo reducimos su tamaño y le aplicamos truncado con … si el
+   título es muy largo, para que nunca desborde el header. */
+@media (max-width: 768px) {
+  .hq-toast {
+    font-size: 0.667rem;
+    max-width: calc(100vw - 160px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* white-space ya es nowrap, heredado de la regla base */
+  }
 }
 
 /* =========================
@@ -509,9 +584,228 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
+/* Variante "modal" del corazón flotante: se inserta en <body> con position
+   fixed y z-index por encima del modal-overlay (9999). El botón conserva
+   el mismo estilo visual que en la galería (heredado de .hq-photo-heart). */
+.hq-photo-heart--modal {
+  position: fixed !important;
+  /* La posición exacta (left/top) la fija el JS; transform centra el botón
+     en torno a su punto pivote (left = centro de la foto). */
+  transform: translateX(-50%);
+  z-index: 10001;
+  /* Anular bottom heredado de .hq-photo-heart (irrelevante con position fixed) */
+  bottom: auto;
+}
+
+/* Burst hearts disparados desde el modal: posicionados en body sobre el
+   modal (z-index 9999). Al mismo nivel que el contador "flotante" (10001)
+   durante la secuencia, así pueden cruzar visualmente sobre él. */
+.hq-burst-heart--modal {
+  position: fixed !important;
+  z-index: 10001;
+}
+
+/* =========================
+   4c. SECUENCIA "BURBUJA" — corazón dialogo-dot
+   ─────────────────────────────────────────
+   El corazón se "encierra" en una pompa de jabón translúcida que
+   asciende oscilando suavemente. En su pico estalla con un anillo
+   blanco + 6 mini-corazones radiales. El corazón fantasma vuela al
+   contador desde el punto del estallido.
+========================= */
+
+.hq-bubble {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  /* Pompa de jabón: gradiente sutil + reflejo + borde tenue */
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.15) 25%, rgba(255,255,255,0) 60%),
+    radial-gradient(circle at 65% 70%, rgba(180,220,255,0.25) 0%, rgba(255,255,255,0) 50%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 0 14px rgba(255, 255, 255, 0.4),
+    0 4px 14px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+}
+.hq-bubble::after {
+  /* Highlight superior izquierda — refleja la "luz" en la burbuja */
+  content: "";
+  position: absolute;
+  top: 7px; left: 9px;
+  width: 12px; height: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+  filter: blur(0.5px);
+}
+.hq-bubble img {
+  width: 22px; height: 22px;
+  display: block;
+  animation: heartbeat 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+
+/* Flotación: sube ~250 px con oscilación lateral leve */
+@keyframes hq-bubble-float {
+  0%   { transform: translate(0, 0)     scale(0.7); opacity: 0; }
+  10%  { transform: translate(0, -10px) scale(1);   opacity: 1; }
+  30%  { transform: translate(8px, -50px); }
+  50%  { transform: translate(-6px, -110px); }
+  70%  { transform: translate(7px, -180px); }
+  90%  { transform: translate(-3px, -240px); opacity: 1; }
+  100% { transform: translate(0, -260px); opacity: 1; }
+}
+
+/* Estallido de la burbuja: anillo blanco que se expande y desvanece */
+.hq-bubble-pop {
+  position: fixed;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  z-index: 9001;
+  animation: hq-bubble-pop 380ms cubic-bezier(.2,.6,.4,1) forwards;
+}
+@keyframes hq-bubble-pop {
+  0%   { transform: scale(1);   opacity: 1; border-width: 2px; }
+  60%  { transform: scale(1.6); opacity: 0.6; border-width: 1px; }
+  100% { transform: scale(2.0); opacity: 0; border-width: 0; }
+}
+
+/* Mini-corazones radiales que salen del estallido (chispas) */
+.hq-bubble-spark {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9001;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hq-bubble, .hq-bubble-pop, .hq-bubble-spark { animation: none !important; }
+}
+
+/* =========================
+   4d. SECUENCIA "REVENTAR" — corazón mensaje
+   ─────────────────────────────────────────
+   Tras enviar el formulario de contacto con éxito, el icono ♥ del label
+   "Mensaje (dime algo bonito ♥)" crece progresivamente sin parar (4
+   pasos: 1,7× → 2,7× → 4× → 6×) hasta reventar en su tamaño máximo y
+   estallar en pedazos rojos irregulares. El corazón fantasma vuela al
+   contador desde el punto de la rotura. Tras el vuelo, el icono vuelve
+   a su estado normal en el label.
+========================= */
+
+#msgHeart.hq-msg-growing {
+  /* Subido y aislado del flujo del label para que crezca sin afectar al
+     layout del formulario y quede por encima de otros elementos. */
+  position: relative;
+  z-index: 9000;
+  transform-origin: center center;
+  animation: hq-msg-grow-burst 1300ms cubic-bezier(.34,1.56,.64,1) forwards;
+}
+
+@keyframes hq-msg-grow-burst {
+  /* Crecimiento PROGRESIVO Y CONTINUO — el corazón siempre va a más,
+     nunca encoge antes de reventar. Cada paso supera al anterior con
+     pequeños rebotes que mantienen el tamaño grande (tensión "se está
+     hinchando demasiado"). En el 100% revienta de golpe en su tamaño
+     máximo (scale 6 + opacity 0). */
+  0%   { transform: scale(1);   opacity: 1; }
+  12%  { transform: scale(1.7); opacity: 1; }
+  17%  { transform: scale(1.6); opacity: 1; }
+  30%  { transform: scale(2.7); opacity: 1; }
+  35%  { transform: scale(2.6); opacity: 1; }
+  50%  { transform: scale(4.0); opacity: 1; }
+  55%  { transform: scale(3.9); opacity: 1; }
+  72%  { transform: scale(5.2); opacity: 1; }
+  85%  { transform: scale(5.8); opacity: 1; }
+  93%  { transform: scale(6.0); opacity: 1; }
+  100% { transform: scale(6.0); opacity: 0; }
+}
+
+/* Pedazos del corazón roto: divs absolute con clip-path irregular y
+   color rojo en distintos tonos. El JS asigna shape, color y tamaño
+   aleatorios a cada uno. */
+.hq-msg-fragment {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9001;
+  will-change: transform, opacity;
+  background: #e74c3c;
+  /* default polygon — el JS asigna uno de los 7 disponibles */
+  clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #msgHeart.hq-msg-growing { animation: none !important; }
+  .hq-msg-fragment { display: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slide.is-grandma-anim { animation: none !important; }
   .hq-burst-heart { display: none !important; }
+}
+
+/* =========================
+   4b. CORAZÓN-DOT (carrusel)
+   ─────────────────────────
+   Patrón usado en dialogogeneracional.html: el segundo .dot del carrusel
+   se transforma en un corazoncito latiendo. Mantiene su listener de
+   navegación al slide 2 y, además, lleva data-heart-id="dialogo-dot"
+   para que el listener delegado de heart-quest.js lo recolecte al click.
+   Al recolectarse, .is-collected dispara un fade-out y JS restaura el
+   dot normal eliminando la imagen y las clases.
+========================= */
+
+.dot.hq-dot-heart {
+  /* Anular la apariencia del dot original: sin borde, sin fondo */
+  width: auto;
+  height: auto;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* Que respire ligeramente respecto a los puntos vecinos sin desalinear */
+  margin: -3px 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.dot.hq-dot-heart img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  animation: heartbeat 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+@media (hover: hover) {
+  .dot.hq-dot-heart:hover img,
+  .dot.hq-dot-heart:focus-visible img {
+    transform: scale(1.18);
+    filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.55));
+  }
+}
+
+.dot.hq-dot-heart.is-collected {
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot.hq-dot-heart img { animation: none; }
 }
 
 /* =========================
@@ -532,6 +826,10 @@
 
   /* En mobile la palabra "recolectados" se oculta; queda solo "X/Y ❤" */
   .hq-counter__label { display: none; }
+
+  /* En la HOME en mobile no hay espacio para el contador (el header solo
+     tiene logo + lang-selector y se queda muy apretado). Lo ocultamos. */
+  .hq-counter--home { display: none; }
 
   .hq-panel {
     top: 56px;

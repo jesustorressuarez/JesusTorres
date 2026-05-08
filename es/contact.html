@@ -339,7 +339,7 @@
                             <input type="tel" id="telefono" name="phone" autocomplete="tel" placeholder=" ">
                             <label for="telefono">Teléfono <span class="label-hint">(opcional)</span></label>
                             <span class="bar"></span>
-                            <span class="error-msg" id="phoneError">Incluye el prefijo (ej. +34 612 345 678)</span>
+                            <span class="error-msg" id="phoneError">El número debe tener al menos 9 cifras</span>
                         </div>
 
                         <button class="cta_form" type="submit">Enviar</button>
@@ -940,7 +940,7 @@
                         }
                     });
 
-                    // Teléfono: opcional, pero si se rellena debe tener prefijo + 9 cifras
+                    // Teléfono: opcional, pero si se rellena debe tener al menos 9 cifras
                     var telefono = document.getElementById('telefono');
                     if (telefono) {
                         var phoneGroup = telefono.closest('.input-group');
@@ -948,25 +948,13 @@
                         var phoneVal = telefono.value.trim();
 
                         if (phoneVal !== '') {
-                            var match = phoneVal.match(/^\+(\d{1,4})[\s\-]?(.*)$/);
-
-                            if (!phoneVal.startsWith('+')) {
-                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
+                            var phoneDigits = phoneVal.replace(/[^0-9]/g, '').length;
+                            if (phoneDigits < 9) {
+                                phoneError.textContent = 'El número debe tener al menos 9 cifras';
                                 phoneGroup.classList.add('error');
                                 isValid = false;
-                            } else if (match) {
-                                var numberDigits = match[2].replace(/[^0-9]/g, '').length;
-                                if (numberDigits !== 9) {
-                                    phoneError.textContent = 'El número debe tener 9 cifras';
-                                    phoneGroup.classList.add('error');
-                                    isValid = false;
-                                } else {
-                                    phoneGroup.classList.remove('error');
-                                }
                             } else {
-                                phoneError.textContent = 'Incluye el prefijo (ej. +34 612 345 678)';
-                                phoneGroup.classList.add('error');
-                                isValid = false;
+                                phoneGroup.classList.remove('error');
                             }
                         } else {
                             phoneGroup.classList.remove('error');
