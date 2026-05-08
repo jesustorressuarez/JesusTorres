@@ -75,7 +75,13 @@
     ];
 
     var STORAGE_KEY = 'jt_hearts';
+    var STORAGE_HELP_OPEN_KEY = 'jt_hearts_help_open';   /* "1" si el panel flotante de ayuda está abierto */
     var STORAGE_VERSION = 1;
+
+    /** Padding-left del bocadillo del hover (.hq-panel) — debe coincidir con
+        el CSS. Se usa en positionPanel() para alinear el contenido interior
+        del bocadillo con el "X/Y" del contador. */
+    var HQ_PANEL_PAD_LEFT = 18;
 
     /* ═══════════════════════════════════════════
        ESTADO + PERSISTENCIA
@@ -119,12 +125,11 @@
     ═══════════════════════════════════════════ */
 
     var counterEl = null;
-    var panelEl = null;
+    var panelEl = null;          /* bocadillo del hover (intro + encontrados + botón) */
+    var helpPanelEl = null;      /* panel flotante bottom-left (lista de corazones por encontrar) */
     var toastEl = null;
     var toastTimer = null;
-    /** Vista actual del panel: 'intro' (frase + botón Ayuda) o 'help' (lista de corazones). */
-    var panelView = 'intro';
-    /** Estado UI por item (solo memoria, no persiste): qué items están expandidos en la vista help. */
+    /** Estado UI por item (solo memoria, no persiste): qué items están expandidos en el panel de ayuda. */
     var itemExpanded = {};
 
     function buildCounter() {
@@ -172,22 +177,31 @@
         return btn;
     }
 
-    /** Muestra el toast con el mensaje  +1.  "<title>"  durante 4s.
+    /** Muestra el toast con el mensaje  +1.  "<title>"  durante 3s + fade-out.
         - "+1." en negrita
         - El título y sus comillas en cursiva
         - Espacio garantizado con &nbsp; para que no lo colapse el navegador
-        Se llama justo cuando el corazón volador aterriza en el contador. */
+
+        Durante la secuencia modal del corazón abuela, hay un CLON del
+        contador sobre el overlay y el toast solo debe mostrarse ahí —
+        no en el contador real (cuyo toast saldría a la derecha en lugar
+        de debajo). Por eso si hay clon activo elegimos solo el toast del
+        clon; en el resto de casos, el toast del contador real. */
     function showToast(title) {
         if (!toastEl || !title) { return; }
-        toastEl.innerHTML =
+        var html =
             '<strong>+1.</strong>&nbsp;' +
             '<em>&ldquo;' + escapeHtml(title) + '&rdquo;</em>';
-        toastEl.classList.remove('is-visible');
-        void toastEl.offsetWidth;          /* fuerza reflow para reiniciar la transición */
-        toastEl.classList.add('is-visible');
+
+        var target = cloneToastEl || toastEl;
+        target.innerHTML = html;
+        target.classList.remove('is-visible');
+        void target.offsetWidth;
+        target.classList.add('is-visible');
+
         if (toastTimer) { clearTimeout(toastTimer); }
         toastTimer = setTimeout(function () {
-            if (toastEl) { toastEl.classList.remove('is-visible'); }
+            if (target) { target.classList.remove('is-visible'); }
             toastTimer = null;
         }, 3000);
     }
@@ -208,15 +222,13 @@
             if (hoverCloseTimer) { clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
         }
         function scheduleHoverClose() {
-            /* En vista 'help' no auto-cerramos (el usuario está leyendo pistas) */
-            if (panelView !== 'intro') { return; }
             cancelHoverClose();
             hoverCloseTimer = setTimeout(closePanel, 250);
         }
 
         if (supportsHover) {
             /* Desktop con hover: el contador NO es clicable, solo hover.
-               Hover abre el panel; sacar el cursor lo cierra (en vista intro). */
+               Hover abre el bocadillo; sacar el cursor lo cierra. */
             counterEl.addEventListener('mouseenter', function () {
                 cancelHoverClose();
                 if (!panelEl.classList.contains('is-open')) { openPanel(); }
@@ -237,56 +249,63 @@
         if (!counterEl) { return; }
         var found = state.collected.length;
         var total = HEARTS.length;
-        var num = counterEl.querySelector('.hq-counter__num');
-        if (num) { num.textContent = found + '/' + total; }
-        counterEl.setAttribute('aria-label', found + ' de ' + total + ' corazones recolectados');
 
-        if (found === total) {
-            counterEl.classList.add('is-complete');
-        } else {
-            counterEl.classList.remove('is-complete');
-        }
+        /* Sincroniza tanto el contador real como su clon (si está activo
+           sobre el modal). El visitante ve el clon; el real se actualiza
+           en silencio detrás del overlay para estar listo si se cierra. */
+        var targets = [counterEl];
+        if (counterClone) { targets.push(counterClone); }
 
-        if (animate) {
-            counterEl.classList.remove('is-pulsing');
-            void counterEl.offsetWidth;
-            counterEl.classList.add('is-pulsing');
-            setTimeout(function () {
-                if (counterEl) { counterEl.classList.remove('is-pulsing'); }
-            }, 500);
+        for (var i = 0; i < targets.length; i++) {
+            (function (el) {
+                var num = el.querySelector('.hq-counter__num');
+                if (num) { num.textContent = found + '/' + total; }
+                el.setAttribute('aria-label', found + ' de ' + total + ' corazones recolectados');
+
+                if (found === total) { el.classList.add('is-complete'); }
+                else                  { el.classList.remove('is-complete'); }
+
+                if (animate) {
+                    el.classList.remove('is-pulsing');
+                    void el.offsetWidth;
+                    el.classList.add('is-pulsing');
+                    setTimeout(function () {
+                        if (el) { el.classList.remove('is-pulsing'); }
+                    }, 500);
+                }
+            })(targets[i]);
         }
     }
 
     /* ═══════════════════════════════════════════
-       DOM — PANEL DESPLEGABLE
+       DOM — BOCADILLO DEL HOVER (panel intro)
+       ─────────────────────────────────────────
+       Solo se abre por hover sobre el contador. Estructura fija:
+         · Frase de intro
+         · (Si hay) Sección "Corazones encontrados" con título + descripción
+         · Botón "Pedir ayuda" → abre el panel flotante de pistas
     ═══════════════════════════════════════════ */
 
     function buildPanel() {
         var panel = document.createElement('div');
         panel.className = 'hq-panel';
         panel.setAttribute('role', 'dialog');
-        panel.setAttribute('aria-label', 'Lista de corazones');
+        panel.setAttribute('aria-label', 'Resumen del minijuego');
         document.body.appendChild(panel);
 
-        /* CRÍTICO: detener la propagación de clicks dentro del panel.
-           Sin esto, al hacer clic en el botón de pista, el handler hace
-           re-render del panel (innerHTML), el target del evento queda
-           desconectado del DOM, y cuando burbujea hasta document, el
-           closest('.hq-panel') devuelve null → el panel se cerraba. */
+        /* Detener la propagación de clicks dentro del bocadillo para que un
+           click sobre "Pedir ayuda" no dispare el listener de cierre por
+           click-fuera. */
         panel.addEventListener('click', function (e) {
             e.stopPropagation();
         });
 
+        /* Click-fuera cierra el bocadillo (relevante sobre todo en mobile,
+           donde el bocadillo se abre con tap-toggle y no por hover). */
         document.addEventListener('click', function (e) {
             if (!panel.classList.contains('is-open')) { return; }
             if (e.target.closest('.hq-panel') || e.target.closest('.hq-counter')) { return; }
             closePanel();
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && panel.classList.contains('is-open')) {
-                closePanel();
-            }
         });
 
         return panel;
@@ -295,109 +314,47 @@
     function renderPanel() {
         if (!panelEl) { return; }
 
-        /* Toggle clase .is-help para que CSS muestre el × solo en vista help */
-        if (panelView === 'help') { panelEl.classList.add('is-help'); }
-        else                       { panelEl.classList.remove('is-help'); }
+        var heartImg =
+            '<img class="hq-heart-inline" src="' + HEART_IMG + '" alt="corazones" aria-label="corazones">';
+        var html = '<p class="hq-panel__intro">' +
+                     'Explora la web y encuentra todos los ' + heartImg + ' ' +
+                     'para desbloquear un premio misterioso.' +
+                   '</p>';
 
-        /* Botón cerrar — presente siempre en el HTML; CSS lo oculta en intro */
-        var html = '<button type="button" class="hq-panel__close" aria-label="Cerrar">×</button>';
-
-        if (panelView === 'intro') {
-            /* Vista 1: frase de intro con corazón animado + botón "Pedir ayuda" */
-            var heartImg =
-                '<img class="hq-heart-inline" src="' + HEART_IMG + '" alt="corazones" aria-label="corazones">';
-            html += '<p class="hq-panel__intro">' +
-                      'Explora la web y encuentra todos los ' + heartImg + ' ' +
-                      'para desbloquear un premio misterioso.' +
-                    '</p>';
-            html += '<button type="button" class="hq-link hq-panel__help-btn" data-hq-action="help">' +
-                      'Pedir ayuda' +
-                    '</button>';
-        } else {
-            /* Vista 2: lista numerada con cabecera + items expandibles +/- */
-            html += '<p class="hq-panel__help-header">' +
-                      'Estos son los corazones que tienes que encontrar:' +
-                    '</p>';
-            html += '<ol class="hq-panel__list">';
-
-            for (var i = 0; i < HEARTS.length; i++) {
-                var h = HEARTS[i];
-                var isFound = isCollected(h.id);
-                var lvl = state.hintLevel[h.id] || 0;
-                var maxLvl = h.hints.length;
-                var expanded = !!itemExpanded[h.id];
-
-                html += '<li class="hq-item' + (isFound ? ' is-found' : '') +
-                        (expanded ? ' is-expanded' : '') + '" data-hq-item="' + h.id + '">';
-                html +=   '<div class="hq-item__head">';
-
-                /* Marcador izquierdo: número (no encontrado) o tick (encontrado) */
-                if (isFound) {
-                    html += '<span class="hq-item__marker hq-item__marker--check" aria-label="Encontrado">✓</span>';
-                } else {
-                    html += '<span class="hq-item__marker">' + (i + 1) + '.</span>';
-                }
-
-                html +=     '<span class="hq-item__title">' + escapeHtml(h.title) + '</span>';
-
-                /* Botón +/- solo si no está encontrado */
-                if (!isFound) {
-                    var toggleSym, toggleAria;
-                    if (expanded && lvl >= maxLvl) {
-                        toggleSym = '−'; toggleAria = 'Ocultar pistas';
-                    } else {
-                        toggleSym = '+'; toggleAria = (lvl === 0 ? 'Mostrar pista' : 'Mostrar más');
-                    }
-                    html += '<button type="button" class="hq-item__toggle" data-hq-toggle="' + h.id + '"' +
-                            ' aria-label="' + toggleAria + '" aria-expanded="' + (expanded ? 'true' : 'false') + '">' +
-                              toggleSym +
-                            '</button>';
-                }
-
-                html +=   '</div>';
-
-                /* Cuerpo expandible: pistas reveladas (no encontrados) o descripción (encontrados) */
-                if (isFound) {
-                    /* Descripción = la última pista (la más directa) */
-                    html += '<p class="hq-item__desc">' +
-                              escapeHtml(h.hints[h.hints.length - 1]) +
-                            '</p>';
-                } else if (expanded && lvl > 0) {
-                    html += '<ol class="hq-item__hints">';
-                    for (var k = 0; k < lvl; k++) {
-                        html += '<li>' + escapeHtml(h.hints[k]) + '</li>';
-                    }
-                    html += '</ol>';
-                }
-
+        /* Sección "Corazones encontrados" — solo si hay al menos uno.
+           Se muestran TODOS los recolectados con su título y descripción
+           (la última pista, que explica cómo se consigue). */
+        var foundHearts = [];
+        for (var i = 0; i < HEARTS.length; i++) {
+            if (isCollected(HEARTS[i].id)) { foundHearts.push(HEARTS[i]); }
+        }
+        if (foundHearts.length > 0) {
+            html += '<ul class="hq-found">';
+            for (var f = 0; f < foundHearts.length; f++) {
+                var fh = foundHearts[f];
+                html += '<li class="hq-found__item">';
+                html +=   '<span class="hq-found__title">' + escapeHtml(fh.title) + '</span>';
+                html +=   '<span class="hq-found__desc">' +
+                            escapeHtml(fh.hints[fh.hints.length - 1]) +
+                          '</span>';
                 html += '</li>';
             }
-
-            html += '</ol>';
+            html += '</ul>';
         }
+
+        html += '<button type="button" class="hq-link hq-panel__help-btn" data-hq-action="help">' +
+                  'Pedir ayuda' +
+                '</button>';
 
         panelEl.innerHTML = html;
 
-        var closeBtn = panelEl.querySelector('.hq-panel__close');
-        if (closeBtn) { closeBtn.addEventListener('click', closePanel); }
-
-        /* Botones +/- de cada item */
-        var toggleBtns = panelEl.querySelectorAll('[data-hq-toggle]');
-        for (var j = 0; j < toggleBtns.length; j++) {
-            (function (btn) {
-                btn.addEventListener('click', function () {
-                    toggleItem(btn.getAttribute('data-hq-toggle'));
-                });
-            })(toggleBtns[j]);
-        }
-
-        /* Botón "Pedir ayuda" — cambia a la vista 'help' */
+        /* Botón "Pedir ayuda" — abre el panel flotante de pistas */
         var helpBtn = panelEl.querySelector('[data-hq-action="help"]');
         if (helpBtn) {
             helpBtn.addEventListener('click', function () {
-                panelView = 'help';
-                renderPanel();
-                positionPanel();
+                openHelpPanel();
+                /* Cerramos el bocadillo del hover; el panel flotante toma el relevo */
+                closePanel();
             });
         }
     }
@@ -406,8 +363,9 @@
         if (!panelEl || !counterEl) { return; }
         var rect = counterEl.getBoundingClientRect();
         panelEl.style.top = (rect.bottom + 8) + 'px';
-        /* Alineado por la izquierda (el contador ahora está a la izquierda) */
-        panelEl.style.left = Math.max(12, rect.left) + 'px';
+        /* Restamos el padding-left del bocadillo para que el contenido interior
+           (textos y botón) quede alineado con el "X/Y" del contador. */
+        panelEl.style.left = Math.max(12, rect.left - HQ_PANEL_PAD_LEFT) + 'px';
         panelEl.style.right = 'auto';
     }
 
@@ -428,10 +386,130 @@
         if (!panelEl) { return; }
         panelEl.classList.remove('is-open');
         if (counterEl) { counterEl.setAttribute('aria-expanded', 'false'); }
-        /* Al cerrar, la próxima apertura siempre empieza por la vista intro
-           y todos los items colapsados (las pistas pedidas SÍ se recuerdan). */
-        panelView = 'intro';
-        itemExpanded = {};
+    }
+
+    /* ═══════════════════════════════════════════
+       DOM — PANEL FLOTANTE "PEDIR AYUDA"
+       ─────────────────────────────────────────
+       Anclado al margen inferior-izquierdo, persistente entre páginas
+       (estado guardado en localStorage). Solo se cierra al pulsar la ×.
+       Contiene la lista de corazones POR ENCONTRAR con +/- de pistas.
+    ═══════════════════════════════════════════ */
+
+    function buildHelpPanel() {
+        var panel = document.createElement('div');
+        panel.className = 'hq-help-panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-label', 'Pistas de los corazones por encontrar');
+        document.body.appendChild(panel);
+
+        /* Detener la propagación para que clicks dentro del panel no cierren
+           el bocadillo del hover si llegase a estar abierto a la vez. */
+        panel.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+
+        return panel;
+    }
+
+    function renderHelpPanel() {
+        if (!helpPanelEl) { return; }
+
+        var html = '<button type="button" class="hq-help-panel__close" aria-label="Cerrar">×</button>';
+
+        /* Filtrar los corazones por encontrar */
+        var pending = [];
+        for (var i = 0; i < HEARTS.length; i++) {
+            if (!isCollected(HEARTS[i].id)) { pending.push(HEARTS[i]); }
+        }
+
+        if (pending.length === 0) {
+            html += '<p class="hq-help-panel__empty">' +
+                      '¡Has encontrado todos los corazones! 🎉' +
+                    '</p>';
+        } else {
+            html += '<p class="hq-help-panel__header">' +
+                      'Estos son los corazones que te faltan por encontrar:' +
+                    '</p>';
+            html += '<ol class="hq-help-panel__list">';
+
+            for (var p = 0; p < pending.length; p++) {
+                var h = pending[p];
+                var lvl = state.hintLevel[h.id] || 0;
+                var maxLvl = h.hints.length;
+                var expanded = !!itemExpanded[h.id];
+
+                html += '<li class="hq-item' +
+                        (expanded ? ' is-expanded' : '') +
+                        '" data-hq-item="' + h.id + '">';
+                html +=   '<div class="hq-item__head">';
+                html +=     '<span class="hq-item__marker">' + (p + 1) + '.</span>';
+                html +=     '<span class="hq-item__title">' + escapeHtml(h.title) + '</span>';
+
+                var toggleSym, toggleAria;
+                if (expanded && lvl >= maxLvl) {
+                    toggleSym = '−'; toggleAria = 'Ocultar pistas';
+                } else {
+                    toggleSym = '+'; toggleAria = (lvl === 0 ? 'Mostrar pista' : 'Mostrar más');
+                }
+                html += '<button type="button" class="hq-item__toggle" data-hq-toggle="' + h.id + '"' +
+                        ' aria-label="' + toggleAria + '" aria-expanded="' + (expanded ? 'true' : 'false') + '">' +
+                          toggleSym +
+                        '</button>';
+                html +=   '</div>';
+
+                if (expanded && lvl > 0) {
+                    html += '<ol class="hq-item__hints">';
+                    for (var k = 0; k < lvl; k++) {
+                        html += '<li>' + escapeHtml(h.hints[k]) + '</li>';
+                    }
+                    html += '</ol>';
+                }
+
+                html += '</li>';
+            }
+
+            html += '</ol>';
+        }
+
+        helpPanelEl.innerHTML = html;
+
+        var closeBtn = helpPanelEl.querySelector('.hq-help-panel__close');
+        if (closeBtn) { closeBtn.addEventListener('click', closeHelpPanel); }
+
+        var toggleBtns = helpPanelEl.querySelectorAll('[data-hq-toggle]');
+        for (var t = 0; t < toggleBtns.length; t++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    toggleItem(btn.getAttribute('data-hq-toggle'));
+                });
+            })(toggleBtns[t]);
+        }
+    }
+
+    function openHelpPanel() {
+        if (!helpPanelEl) { return; }
+        renderHelpPanel();
+        helpPanelEl.classList.add('is-open');
+        saveHelpPanelOpen(true);
+    }
+
+    function closeHelpPanel() {
+        if (!helpPanelEl) { return; }
+        helpPanelEl.classList.remove('is-open');
+        saveHelpPanelOpen(false);
+    }
+
+    function loadHelpPanelOpen() {
+        try {
+            return localStorage.getItem(STORAGE_HELP_OPEN_KEY) === '1';
+        } catch (e) { return false; }
+    }
+    function saveHelpPanelOpen(isOpen) {
+        try {
+            if (isOpen) { localStorage.setItem(STORAGE_HELP_OPEN_KEY, '1'); }
+            else        { localStorage.removeItem(STORAGE_HELP_OPEN_KEY); }
+        } catch (e) { /* localStorage lleno o bloqueado */ }
     }
 
     /* ═══════════════════════════════════════════
@@ -447,7 +525,7 @@
         state.hintLevel[id] = current + 1;
         state.revealedHint[id] = true;
         saveState();
-        renderPanel();
+        renderHelpPanel();
     }
 
     /** Toggle del +/- de cada item de la lista de help.
@@ -482,7 +560,7 @@
             saveState();
         }
 
-        renderPanel();
+        renderHelpPanel();
     }
 
     /* ═══════════════════════════════════════════
@@ -510,8 +588,14 @@
         flyHeart(originRect, function () {
             refreshCounter(true);
             showToast(heart.title);
+            /* Refrescamos los paneles abiertos para reflejar el nuevo estado:
+               · Bocadillo del hover → la lista de "encontrados" crece
+               · Panel flotante → ese corazón sale de la lista de pendientes */
             if (panelEl && panelEl.classList.contains('is-open')) {
                 renderPanel();
+            }
+            if (helpPanelEl && helpPanelEl.classList.contains('is-open')) {
+                renderHelpPanel();
             }
         });
     }
@@ -624,25 +708,39 @@
     }
 
     /* ═══════════════════════════════════════════
-       SECUENCIA ESPECIAL — CORAZÓN DE LA ABUELA
+       SECUENCIA "ABUELA" — CASCADA HACIA ARRIBA
        ───────────────────────────────────────────
-       Tres fases estrictamente secuenciales (total 2000 ms):
-       ① 0-700 ms    → vibración crescendo lineal del slide entero
-       ② 700-1300 ms → explosión de 18 corazones desde el corazón pequeño
-       ③ 1300-2000 ms → vuelo al contador + slide volviendo a tamaño normal
-       Variante elegida: «Alt A · Crescendo lineal» (demo v6).
+       Animación unificada para los dos contextos (galería y modal):
+       glow dorado del corazón + 3 oleadas escalonadas de 8 partículas
+       Twemoji que suben en parábola y al ápice liberan un mini-burst.
+
+       Diferencias por contexto:
+       · Galería: el slide entero hace zoom suave (1,10×) sin vibración
+         y se sobrepone al grid. Las partículas son hijos del slide.
+       · Modal: la foto queda quieta; las partículas se generan en <body>
+         con position: fixed para quedar sobre el overlay del modal.
     ═══════════════════════════════════════════ */
 
-    var GRANDMA_T_SHAKE_END = 700;
-    var GRANDMA_T_BURST_END = 1300;
-    var GRANDMA_T_TOTAL = 2000;
-    var GRANDMA_BURST_COUNT = 18;
+    var GRANDMA_CASCADE_WAVES = 3;
+    var GRANDMA_CASCADE_PER_WAVE = 8;
+    var GRANDMA_CASCADE_WAVE_GAP = 220;            /* ms entre oleadas */
+    var GRANDMA_CASCADE_PARTICLE_DUR = 1100;       /* dur. base por partícula */
+    var GRANDMA_CASCADE_TOTAL =                    /* fin de la última oleada */
+        GRANDMA_CASCADE_WAVE_GAP * GRANDMA_CASCADE_WAVES + GRANDMA_CASCADE_PARTICLE_DUR;
+    var GRANDMA_ZOOM_TOTAL = 2200;                 /* duración del CSS hq-grandma-zoom */
+
+    /* URLs Twemoji para los fuegos artificiales — mezcla de 4 emojis */
+    var GRANDMA_FW_EMOJI = {
+        sparkles: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2728.svg',  /* ✨ */
+        star:     'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2b50.svg',  /* ⭐ */
+        glowStar: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f31f.svg', /* 🌟 */
+        dizzy:    'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4ab.svg'  /* 💫 */
+    };
 
     function runGrandmaSequence(heartButton) {
         var slide = heartButton.closest('.slide');
         if (!slide) {
-            /* Fallback: si por alguna razón no hay slide contenedor, recolectar
-               el corazón con el flujo estándar (vuelo directo al contador). */
+            /* Fallback: vuelo directo al contador */
             var fallbackRect = heartButton.getBoundingClientRect();
             collect('abuela', fallbackRect);
             heartButton.classList.add('is-collected');
@@ -650,208 +748,278 @@
             return;
         }
 
-        /* FASE 1 · vibración crescendo */
+        /* Zoom suave del slide (sin vibración) y glow dorado del corazón */
         slide.classList.add('is-grandma-anim');
+        heartButton.classList.add('is-bursting');
 
-        /* FASE 2 · explosión de corazones */
-        setTimeout(function () {
-            spawnGrandmaBurst(slide, heartButton);
-        }, GRANDMA_T_SHAKE_END);
+        /* Origen = centro del corazón en coords NO-ESCALADAS del slide.
+           El slide se está escalando (1,10×), por eso compensamos. */
+        var hRect = heartButton.getBoundingClientRect();
+        var sRect = slide.getBoundingClientRect();
+        var scaleX = sRect.width  / slide.offsetWidth;
+        var scaleY = sRect.height / slide.offsetHeight;
+        var ox = (hRect.left + hRect.width  / 2 - sRect.left) / scaleX;
+        var oy = (hRect.top  + hRect.height / 2 - sRect.top)  / scaleY;
 
-        /* FASE 3 · vuelo al contador (recolección oficial) */
+        /* Lanzar 3 oleadas escalonadas dentro del slide */
+        for (var w = 0; w < GRANDMA_CASCADE_WAVES; w++) {
+            (function (idx) {
+                setTimeout(function () {
+                    spawnGrandmaCascadeWave(slide, ox, oy, false);
+                }, idx * GRANDMA_CASCADE_WAVE_GAP);
+            })(w);
+        }
+
+        /* Vuelo al contador tras la última oleada (recolección oficial) */
         setTimeout(function () {
             var rect = heartButton.getBoundingClientRect();
             collect('abuela', rect);
             heartButton.classList.add('is-collected');
+            heartButton.classList.remove('is-bursting');
             heartButton.setAttribute('aria-hidden', 'true');
             heartButton.style.pointerEvents = 'none';
-            /* Quita los demás corazones de la abuela (p.ej. el del modal si
-               estuviera abierto) — el actual se anima y se borra después. */
             dismissAllGrandmaHearts(heartButton);
             setTimeout(function () {
                 if (heartButton.parentNode) { heartButton.parentNode.removeChild(heartButton); }
             }, 700);
-        }, GRANDMA_T_BURST_END);
+        }, GRANDMA_CASCADE_TOTAL);
 
-        /* Cleanup: al final, quitar la clase de animación del slide */
+        /* Cleanup del zoom del slide al final */
         setTimeout(function () {
             slide.classList.remove('is-grandma-anim');
-        }, GRANDMA_T_TOTAL);
+        }, GRANDMA_ZOOM_TOTAL);
     }
 
-    /** Lanza GRANDMA_BURST_COUNT corazones que explotan desde el centro del
-        corazón pequeño, vuelan en patrón radial y se desvanecen antes de que
-        empiece la fase 3. Como el slide está escalado durante la explosión,
-        las coordenadas del corazón se normalizan dividiendo por el factor de
-        escala para que los burst hearts queden bien anclados como hijos del
-        slide. */
-    function spawnGrandmaBurst(slide, heartButton) {
-        var burstDuration = (GRANDMA_T_BURST_END - GRANDMA_T_SHAKE_END) - 20;
-        var heartRect = heartButton.getBoundingClientRect();
-        var slideRect = slide.getBoundingClientRect();
-        var scaleX = slideRect.width  / slide.offsetWidth;
-        var scaleY = slideRect.height / slide.offsetHeight;
-        var ox = (heartRect.left + heartRect.width  / 2 - slideRect.left) / scaleX;
-        var oy = (heartRect.top  + heartRect.height / 2 - slideRect.top)  / scaleY;
+    /** Lanza una oleada de GRANDMA_CASCADE_PER_WAVE partículas Twemoji desde
+        el origen (ox, oy) hacia arriba con dispersión amplia. Cada partícula
+        sube en parábola hasta su ápice y allí libera un mini-burst de 3
+        sparkles pequeñas. Si isFixed=true, las partículas usan position
+        fixed (variantes --fixed) para el caso del modal. */
+    function spawnGrandmaCascadeWave(stage, ox, oy, isFixed) {
+        var emojis = [
+            GRANDMA_FW_EMOJI.dizzy,
+            GRANDMA_FW_EMOJI.star,
+            GRANDMA_FW_EMOJI.glowStar,
+            GRANDMA_FW_EMOJI.sparkles
+        ];
+        for (var i = 0; i < GRANDMA_CASCADE_PER_WAVE; i++) {
+            /* Ángulo en abanico hacia arriba (-160° a -20° aprox). Speed
+               variado para que cada partícula llegue a una altura distinta. */
+            var angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.4;
+            var speed = 80 + Math.random() * 110;
+            var apexX = Math.cos(angle) * speed;
+            var apexY = Math.sin(angle) * speed * 1.1;          /* favorece altura */
+            var url = emojis[Math.floor(Math.random() * emojis.length)];
+            var size = 12 + Math.random() * 12;
+            var dur = 800 + Math.random() * 500;
 
-        for (var i = 0; i < GRANDMA_BURST_COUNT; i++) {
-            spawnGrandmaBurstHeart(slide, ox, oy, i, burstDuration);
+            spawnGrandmaParticleWithBurst(stage, ox, oy, {
+                url: url, size: size,
+                apexX: apexX, apexY: apexY,
+                fallX: apexX * 0.5, fallY: apexY + 30,    /* casi se queda en el ápice */
+                dur: dur,
+                trailCount: 2, trailGap: 50,
+                initialScale: 0.3, peakScale: 1.2, endScale: 0.2,
+                fixed: isFixed
+            });
         }
     }
 
-    function spawnGrandmaBurstHeart(slide, ox, oy, i, duration) {
+    /** Spawn una partícula con sus trails y un mini-burst al ápice. */
+    function spawnGrandmaParticleWithBurst(stage, ox, oy, opts) {
+        spawnGrandmaParticle(stage, ox, oy, opts);
+
+        /* Mini-burst justo cuando la partícula llega cerca del ápice */
+        setTimeout(function () {
+            var bx = ox + opts.apexX;
+            var by = oy + opts.apexY;
+            for (var k = 0; k < 3; k++) {
+                spawnGrandmaMiniBurst(stage, bx, by, k, opts.fixed);
+            }
+        }, opts.dur * 0.45);
+    }
+
+    function spawnGrandmaMiniBurst(stage, bx, by, k, isFixed) {
+        var ang = (k / 3) * Math.PI * 2 + Math.random() * 0.4;
+        var d = 18 + Math.random() * 14;
+        var miniSize = 7 + Math.random() * 5;
+        var mini = document.createElement('img');
+        mini.src = GRANDMA_FW_EMOJI.sparkles;
+        mini.className = isFixed ? 'hq-fw-burst hq-fw-burst--fixed' : 'hq-fw-burst';
+        mini.alt = '';
+        mini.setAttribute('aria-hidden', 'true');
+        /* setProperty con 'important' para vencer al !important de
+           `.is-gallery .slide img { width: 100% !important; ... }` que de
+           otro modo expande la partícula al tamaño entero del slide. */
+        mini.style.setProperty('width',  miniSize + 'px', 'important');
+        mini.style.setProperty('height', miniSize + 'px', 'important');
+        mini.style.left = (bx - miniSize / 2) + 'px';
+        mini.style.top  = (by - miniSize / 2) + 'px';
+        stage.appendChild(mini);
+
+        if (typeof mini.animate === 'function') {
+            mini.animate([
+                { transform: 'translate(0,0) scale(0.3)', opacity: 0 },
+                { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0.15 },
+                { transform: 'translate(' + Math.cos(ang) * d + 'px,' + Math.sin(ang) * d + 'px) scale(0.5)',
+                  opacity: 0 }
+            ], {
+                duration: 380 + Math.random() * 180,
+                easing: 'cubic-bezier(.3,.6,.4,1)',
+                fill: 'forwards'
+            }).onfinish = function () {
+                if (mini.parentNode) { mini.parentNode.removeChild(mini); }
+            };
+        } else {
+            setTimeout(function () {
+                if (mini.parentNode) { mini.parentNode.removeChild(mini); }
+            }, 600);
+        }
+    }
+
+    /** Spawn una partícula principal + sus N trails (estela). */
+    function spawnGrandmaParticle(stage, ox, oy, opts) {
+        spawnGrandmaParticleOne(stage, ox, oy, opts, false, 1);
+        for (var t = 1; t <= (opts.trailCount || 0); t++) {
+            (function (idx) {
+                setTimeout(function () {
+                    spawnGrandmaParticleOne(stage, ox, oy, opts, true, 0.5 - (idx - 1) * 0.15);
+                }, idx * (opts.trailGap || 70));
+            })(t);
+        }
+    }
+
+    function spawnGrandmaParticleOne(stage, ox, oy, p, isTrail, opacity) {
         var img = document.createElement('img');
-        img.src = HEART_IMG;
-        img.className = 'hq-burst-heart';
+        img.src = p.url;
+        var baseClass = isTrail ? 'hq-fw-trail' : 'hq-fw-particle';
+        img.className = p.fixed ? (baseClass + ' ' + baseClass + '--fixed') : baseClass;
         img.alt = '';
         img.setAttribute('aria-hidden', 'true');
-        var size = 16 + Math.random() * 14;
-        img.style.width  = size + 'px';
-        img.style.height = size + 'px';
-        img.style.left = (ox - size / 2) + 'px';
-        img.style.top  = (oy - size / 2) + 'px';
-        slide.appendChild(img);
-
-        var angle = (i / GRANDMA_BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-        var dist = 90 + Math.random() * 110;
-        var endX = Math.cos(angle) * dist;
-        var endY = Math.sin(angle) * dist - 25;
-        var rot = (Math.random() - 0.5) * 360;
+        /* setProperty con 'important' para vencer al !important de
+           `.is-gallery .slide img { width: 100% !important; ... }` que de
+           otro modo expande la partícula al tamaño entero del slide. */
+        img.style.setProperty('width',  p.size + 'px', 'important');
+        img.style.setProperty('height', p.size + 'px', 'important');
+        img.style.left = (ox - p.size / 2) + 'px';
+        img.style.top  = (oy - p.size / 2) + 'px';
+        stage.appendChild(img);
 
         if (typeof img.animate === 'function') {
             img.animate([
-                { transform: 'translate(0,0) scale(0.4) rotate(0)', opacity: 0 },
-                { transform: 'translate(0,0) scale(1.1) rotate(' + (rot / 4) + 'deg)', opacity: 1, offset: 0.18 },
-                { transform: 'translate(' + endX + 'px,' + (endY - 20) + 'px) scale(1) rotate(' + (rot / 2) + 'deg)', opacity: 1, offset: 0.65 },
-                { transform: 'translate(' + (endX * 1.15) + 'px,' + (endY + 80) + 'px) scale(0.6) rotate(' + rot + 'deg)', opacity: 0 }
+                { transform: 'translate(0,0) scale(' + p.initialScale + ')', opacity: 0 },
+                { transform: 'translate(0,0) scale(' + p.peakScale + ')', opacity: opacity, offset: 0.06 },
+                { transform: 'translate(' + p.apexX + 'px,' + p.apexY + 'px) scale(1)',
+                  opacity: opacity * 0.85, offset: 0.5 },
+                { transform: 'translate(' + p.fallX + 'px,' + p.fallY + 'px) scale(' + p.endScale + ')',
+                  opacity: 0 }
             ], {
-                duration: duration,
-                easing: 'cubic-bezier(.2,.6,.4,1)',
+                duration: p.dur,
+                easing: 'cubic-bezier(.25,.7,.35,1)',
                 fill: 'forwards'
             }).onfinish = function () {
                 if (img.parentNode) { img.parentNode.removeChild(img); }
             };
         } else {
-            /* Fallback sin Web Animations API: simplemente desaparece al final */
             setTimeout(function () {
                 if (img.parentNode) { img.parentNode.removeChild(img); }
-            }, duration);
+            }, p.dur);
         }
     }
 
-    /* ═══════════════════════════════════════════
-       SECUENCIA "ABUELA" EN EL MODAL DE ZOOM
-       ───────────────────────────────────────────
-       Cuando se pulsa el corazón estando dentro del modal, NO hay vibración
-       (la foto ya está zoom). Solo se ejecutan dos fases:
-         ① 0-580 ms   → explosión de corazones desde el corazón pequeño
-         ② 580-1280 ms → vuelo al contador (recolección oficial)
-       Los burst hearts y el corazón volador se posicionan en el body con
-       z-index alto para quedar por encima del modal (z-index 9999).
-    ═══════════════════════════════════════════ */
-
-    var GRANDMA_MODAL_BURST_DURATION = 580;
-    var GRANDMA_SRC_TOKEN = 'IMG_4502';   // identifica la foto de la abuela por src
+    /* GRANDMA_SRC_TOKEN identifica la foto de la abuela por su src */
+    var GRANDMA_SRC_TOKEN = 'IMG_4502';
 
     function runGrandmaModalSequence(heartButton) {
-        /* FASE 1 (saltada): no hay shake en el modal. */
+        /* Foto QUIETA — solo el corazón se anima dentro del modal. */
 
-        /* Sube SOLO el contador (con su toast) por encima del overlay del
-           modal. El resto del header (logo, lang-selector...) sigue debajo.
-           Se baja al final, sincronizado con el fin del fade-out del toast. */
+        /* Sube el clon del contador sobre el overlay del modal */
         liftCounterAboveModal();
 
-        /* FASE 2 · explosión inmediata desde el corazón */
-        spawnGrandmaModalBurst(heartButton);
+        /* Glow dorado del corazón */
+        heartButton.classList.add('is-bursting');
 
-        /* FASE 3 · vuelo al contador justo después de la explosión */
+        /* Origen = centro del corazón en coords de viewport (position fixed) */
+        var hRect = heartButton.getBoundingClientRect();
+        var ox = hRect.left + hRect.width  / 2;
+        var oy = hRect.top  + hRect.height / 2;
+
+        /* Lanzar 3 oleadas escalonadas en <body> con position fixed */
+        for (var w = 0; w < GRANDMA_CASCADE_WAVES; w++) {
+            (function (idx) {
+                setTimeout(function () {
+                    spawnGrandmaCascadeWave(document.body, ox, oy, true);
+                }, idx * GRANDMA_CASCADE_WAVE_GAP);
+            })(w);
+        }
+
+        /* Vuelo al contador tras la última oleada */
         setTimeout(function () {
             var rect = heartButton.getBoundingClientRect();
             collect('abuela', rect);
             heartButton.classList.add('is-collected');
+            heartButton.classList.remove('is-bursting');
             heartButton.setAttribute('aria-hidden', 'true');
             heartButton.style.pointerEvents = 'none';
-            /* Quita el corazón gemelo de la galería para que al cerrar el modal
-               no siga apareciendo sobre la foto. */
             dismissAllGrandmaHearts(heartButton);
             setTimeout(function () {
                 if (heartButton.parentNode) { heartButton.parentNode.removeChild(heartButton); }
             }, 700);
-        }, GRANDMA_MODAL_BURST_DURATION);
+        }, GRANDMA_CASCADE_TOTAL);
 
-        /* Sincronizar el fade-out del contador con el del toast (1,5 s).
-           El toast inicia su fade-out a los ~4280 ms del click: 580 (burst)
-           + 700 (vuelo) + 3000 (visible). En ese mismo momento añadimos la
-           clase .hq-counter--fading para que el contador se desvanezca
-           junto al mensaje. */
+        /* Sincronizar fade-out del CLON con el toast (1,5 s). Inicio del
+           fade-out del toast: cascada (1760) + vuelo (700) + entrada del
+           toast (250) + visible (3000) ≈ 5710 ms. */
+        var fadeStart = GRANDMA_CASCADE_TOTAL + 700 + 250 + 3000;
         setTimeout(function () {
-            if (counterEl) { counterEl.classList.add('hq-counter--fading'); }
-        }, 4280);
+            if (counterClone) { counterClone.classList.add('hq-counter--fading'); }
+        }, fadeStart);
 
-        /* Bajar el contador tras: explosión (580) + vuelo (700) + entrada
-           del toast (250) + visible (3000) + fade-out (1500) ≈ 6030 ms.
-           Le damos un poco de margen para asegurar que el fade-out termine
-           antes de que el contador vuelva a quedar bajo el overlay. */
-        setTimeout(lowerCounterFromAboveModal, 6100);
+        /* Eliminar el clon tras el fade-out del toast (1500 ms) + margen */
+        setTimeout(lowerCounterFromAboveModal, fadeStart + 1500 + 100);
     }
 
-    /** Mueve temporalmente el contador a <body> con position: fixed, las
-        mismas coordenadas visuales y z-index alto, de modo que escape del
-        stacking context del <header> y quede por encima del overlay del
-        modal (z-index 9999). El resto del header (logo, lang-selector...)
-        sigue debajo del overlay. Para que el header no descomponga su
-        layout mientras el contador "flota", se inserta un placeholder
-        invisible con sus mismas dimensiones y márgenes. */
-    var counterStash = null;
+    /** Crea un CLON del contador (mismo aspecto, dimensiones y posición
+        visual), lo posiciona con position: fixed sobre el modal-overlay
+        (z-index 10001) y deja el contador REAL intacto en el header.
+
+        Así, durante toda la secuencia modal:
+        · El clon es lo que el visitante ve por encima del modal — recibe
+          el corazón volador, hace pulse +1, muestra el toast y al final
+          hace fade-out.
+        · El contador real nunca se mueve ni se anima. Si el visitante
+          cierra el modal en cualquier momento, ve siempre el contador
+          normal en el header (sin parpadeo, sin "huecos" de fade-out).
+
+        refreshCounter() y showToast() detectan si hay clon activo y
+        sincronizan los cambios en ambos elementos. */
+    var counterClone = null;
+    var cloneToastEl = null;
 
     function liftCounterAboveModal() {
-        if (!counterEl || counterStash) { return; }
+        if (!counterEl || counterClone) { return; }
         var rect = counterEl.getBoundingClientRect();
-        var computed = window.getComputedStyle(counterEl);
 
-        var placeholder = document.createElement('span');
-        placeholder.className = 'hq-counter-placeholder';
-        placeholder.setAttribute('aria-hidden', 'true');
-        placeholder.style.display = 'inline-block';
-        placeholder.style.width  = rect.width  + 'px';
-        placeholder.style.height = rect.height + 'px';
-        placeholder.style.marginLeft  = computed.marginLeft;
-        placeholder.style.marginRight = computed.marginRight;
-        placeholder.style.visibility = 'hidden';
-        placeholder.style.pointerEvents = 'none';
+        var clone = counterEl.cloneNode(true);   /* incluye el toast hijo */
+        clone.classList.add('hq-counter--clone', 'hq-counter--modal-anim');
+        clone.style.position = 'fixed';
+        clone.style.left   = rect.left + 'px';
+        clone.style.top    = rect.top  + 'px';
+        clone.style.margin = '0';
+        clone.style.zIndex = '10001';
+        document.body.appendChild(clone);
 
-        counterStash = {
-            parent: counterEl.parentNode,
-            placeholder: placeholder
-        };
-        counterEl.parentNode.insertBefore(placeholder, counterEl);
-
-        counterEl.style.position = 'fixed';
-        counterEl.style.left = rect.left + 'px';
-        counterEl.style.top  = rect.top  + 'px';
-        counterEl.style.margin = '0';
-        counterEl.style.zIndex = '10001';
-        /* Marca para que el toast se posicione debajo del contador (centrado),
-           solo durante esta secuencia modal. */
-        counterEl.classList.add('hq-counter--modal-anim');
-        document.body.appendChild(counterEl);
+        counterClone = clone;
+        cloneToastEl = clone.querySelector('.hq-toast');
     }
 
     function lowerCounterFromAboveModal() {
-        if (!counterEl || !counterStash) { return; }
-        /* Quita la clase de fade-out: cuando el contador vuelve al header,
-           debe tener opacity 1 (estado normal). El cambio es instantáneo
-           porque la regla base no transita la opacity. También se quita la
-           clase que reposiciona el toast debajo (vuelve a estar a la derecha). */
-        counterEl.classList.remove('hq-counter--fading');
-        counterEl.classList.remove('hq-counter--modal-anim');
-        counterEl.removeAttribute('style');
-        if (counterStash.placeholder && counterStash.placeholder.parentNode) {
-            counterStash.placeholder.parentNode.replaceChild(counterEl, counterStash.placeholder);
-        } else if (counterStash.parent) {
-            counterStash.parent.appendChild(counterEl);
+        if (!counterClone) { return; }
+        if (counterClone.parentNode) {
+            counterClone.parentNode.removeChild(counterClone);
         }
-        counterStash = null;
+        counterClone = null;
+        cloneToastEl = null;
     }
 
     /* ═══════════════════════════════════════════
@@ -1095,55 +1263,6 @@
         }
     }
 
-    function spawnGrandmaModalBurst(heartButton) {
-        /* Origen = centro del corazón en pantalla (position fixed). */
-        var rect = heartButton.getBoundingClientRect();
-        var ox = rect.left + rect.width  / 2;
-        var oy = rect.top  + rect.height / 2;
-        for (var i = 0; i < GRANDMA_BURST_COUNT; i++) {
-            spawnGrandmaModalBurstHeart(ox, oy, i);
-        }
-    }
-
-    function spawnGrandmaModalBurstHeart(ox, oy, i) {
-        var img = document.createElement('img');
-        img.src = HEART_IMG;
-        img.className = 'hq-burst-heart hq-burst-heart--modal';
-        img.alt = '';
-        img.setAttribute('aria-hidden', 'true');
-        var size = 16 + Math.random() * 14;
-        img.style.width  = size + 'px';
-        img.style.height = size + 'px';
-        img.style.left = (ox - size / 2) + 'px';
-        img.style.top  = (oy - size / 2) + 'px';
-        document.body.appendChild(img);
-
-        var angle = (i / GRANDMA_BURST_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-        var dist = 90 + Math.random() * 110;
-        var endX = Math.cos(angle) * dist;
-        var endY = Math.sin(angle) * dist - 25;
-        var rot = (Math.random() - 0.5) * 360;
-
-        if (typeof img.animate === 'function') {
-            img.animate([
-                { transform: 'translate(0,0) scale(0.4) rotate(0)', opacity: 0 },
-                { transform: 'translate(0,0) scale(1.1) rotate(' + (rot / 4) + 'deg)', opacity: 1, offset: 0.18 },
-                { transform: 'translate(' + endX + 'px,' + (endY - 20) + 'px) scale(1) rotate(' + (rot / 2) + 'deg)', opacity: 1, offset: 0.65 },
-                { transform: 'translate(' + (endX * 1.15) + 'px,' + (endY + 80) + 'px) scale(0.6) rotate(' + rot + 'deg)', opacity: 0 }
-            ], {
-                duration: GRANDMA_MODAL_BURST_DURATION,
-                easing: 'cubic-bezier(.2,.6,.4,1)',
-                fill: 'forwards'
-            }).onfinish = function () {
-                if (img.parentNode) { img.parentNode.removeChild(img); }
-            };
-        } else {
-            setTimeout(function () {
-                if (img.parentNode) { img.parentNode.removeChild(img); }
-            }, GRANDMA_MODAL_BURST_DURATION);
-        }
-    }
-
     /* ═══════════════════════════════════════════
        MODAL HEART WATCHER
        ───────────────────────────────────────────
@@ -1293,9 +1412,12 @@
             state.collected = [];
             state.hintLevel = {};
             state.revealedHint = {};
+            itemExpanded = {};
             saveState();
+            saveHelpPanelOpen(false);
             refreshCounter();
             if (panelEl && panelEl.classList.contains('is-open')) { renderPanel(); }
+            if (helpPanelEl && helpPanelEl.classList.contains('is-open')) { renderHelpPanel(); }
         }
     };
 
@@ -1326,12 +1448,20 @@
            desde CSS (no hay espacio en el header reducido de la home). */
         if (isHomePage()) { counterEl.classList.add('hq-counter--home'); }
         panelEl = buildPanel();
+        helpPanelEl = buildHelpPanel();
         bindCounterTriggers();
         bindClickListener();
         bindSuccessOverlayWatcher();
         bindHeartRainWatcher();
         bindModalHeartWatcher();
         hideCollectedPhotoHearts();
+
+        /* Si el usuario dejó el panel flotante de ayuda abierto en una página
+           anterior, lo reabrimos automáticamente para que le acompañe en
+           toda la navegación hasta que lo cierre con la ×. */
+        if (loadHelpPanelOpen()) {
+            openHelpPanel();
+        }
 
         window.addEventListener('resize', function () {
             if (panelEl && panelEl.classList.contains('is-open')) { positionPanel(); }
